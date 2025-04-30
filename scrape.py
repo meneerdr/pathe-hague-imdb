@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 scrape.py  –  Pathé Den Haag shows ➜ mobile-friendly card layout HTML
+              (now filtered to Den Haag zone)
 
 ◆ Requires : requests
 ◆ Environment
@@ -17,7 +18,7 @@ import logging
 import os
 import sys
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -25,7 +26,8 @@ from urllib3 import Retry
 
 # ─────────────────────── CONFIG ───────────────────────
 PATHÉ_SHOWS_URL = "https://www.pathe.nl/api/shows"
-PAGE_SIZES = (100, 50, 20)
+ZONE_URL        = "https://www.pathe.nl/api/zone/den-haag"
+PAGE_SIZES      = (100, 50, 20)
 DEFAULT_TIMEOUT = 30
 
 RETRIES = Retry(
@@ -52,8 +54,8 @@ HEADERS: Dict[str, str] = {
     "Connection": "close",
 }
 
-OMDB_URL = "https://www.omdbapi.com/"
-OMDB_KEY_ENV = os.getenv("OMDB_API_KEY") or os.getenv("OMDB_KEY")
+OMDB_URL      = "https://www.omdbapi.com/"
+OMDB_KEY_ENV  = os.getenv("OMDB_API_KEY") or os.getenv("OMDB_KEY")
 MAX_OMDB_WORKERS = 10
 
 # ─────────────────────── logging ───────────────────────
@@ -95,9 +97,18 @@ def fetch_shows(date: str) -> List[dict]:
     LOG.critical("💥 Could not retrieve any shows for %s", date)
     sys.exit(1)
 
+def fetch_zone_slugs() -> set[str]:
+    """Fetch the list of slugs actually playing in the Den Haag zone."""
+    data = get_json(ZONE_URL, params={"language": "nl"})
+    slugs = {s["slug"] for s in data.get("shows", []) if "slug" in s}
+    LOG.info("· fetched %d Den Haag zone slugs", len(slugs))
+    return slugs
+
 # ──────────────────── OMDb enrichment ───────────────────
 def fetch_omdb_data(show: dict, key: str) -> dict:
+    # Prefer originalTitle if provided
     title = show.get("originalTitle") or show.get("title")
+    # Disambiguate by year: productionYear or first releaseAt
     year = show.get("productionYear")
     if not year:
         dates = show.get("releaseAt") or []
@@ -115,20 +126,11 @@ def fetch_omdb_data(show: dict, key: str) -> dict:
         data = get_json(OMDB_URL, params=params, timeout=10)
         if data.get("Response") != "True":
             return {}
-        # parse RT and MC
-        rt = None
-        mc = None
-        for rating in data.get("Ratings", []):
-            if rating.get("Source") == "Rotten Tomatoes" and rating.get("Value") not in ("N/A", None):
-                rt = rating["Value"]  # e.g. "92%"
-            if rating.get("Source") == "Metacritic" and rating.get("Value") not in ("N/A", None):
-                mc = rating["Value"].split("/")[0]  # e.g. "83"
         return {
-            "omdbRating": data.get("imdbRating") if data.get("imdbRating") not in ("N/A", None) else None,
-            "imdbID": data.get("imdbID"),
-            "omdbPoster": data.get("Poster") if data.get("Poster") not in ("N/A", None) else None,
-            "rtRating": rt,
-            "mcRating": mc,
+            "imdbRating": data.get("imdbRating") if data.get("imdbRating") not in ("N/A", None) else None,
+            "imdbVotes":  data.get("imdbVotes")  if data.get("imdbVotes")  not in ("N/A", None) else None,
+            "imdbID":     data.get("imdbID"),
+            "poster":     data.get("Poster")     if data.get("Poster")     not in ("N/A", None) else None,
         }
     except Exception as exc:
         LOG.warning("OMDb lookup failed for %s – %s", title, exc)
@@ -141,51 +143,10 @@ def enrich_with_omdb(shows: List[dict], key: str) -> None:
         for fut in cf.as_completed(futures):
             show = futures[fut]
             data = fut.result() or {}
-            show["omdbRating"] = data.get("omdbRating")
-            show["omdbPoster"] = data.get("omdbPoster")
+            show["omdbRating"] = data.get("imdbRating") or "—"
+            show["omdbVotes"]  = data.get("imdbVotes")  or ""
+            show["omdbPoster"] = data.get("poster")
             show["imdbID"]     = data.get("imdbID")
-            show["rtRating"]   = data.get("rtRating")
-            show["mcRating"]   = data.get("mcRating")
-
-# ──────────────────── rating classes ───────────────────
-def imdb_class(rating: Optional[str]) -> str:
-    try:
-        val = float(rating) if rating else 0
-        if val >= 7.0:
-            return "good"
-        if val >= 6.0:
-            return "ok"
-        if val > 0:
-            return "bad"
-    except ValueError:
-        pass
-    return ""
-
-def rt_class(rating: Optional[str]) -> str:
-    try:
-        val = int(rating.rstrip("%")) if rating else 0
-        if val >= 75:
-            return "good"
-        if val >= 50:
-            return "ok"
-        if val > 0:
-            return "bad"
-    except ValueError:
-        pass
-    return ""
-
-def mc_class(rating: Optional[str]) -> str:
-    try:
-        val = int(rating) if rating else 0
-        if val >= 75:
-            return "good"
-        if val >= 50:
-            return "ok"
-        if val > 0:
-            return "bad"
-    except ValueError:
-        pass
-    return ""
 
 # ──────────────────── HTML output ───────────────────────
 MOBILE_CSS = """
@@ -198,28 +159,13 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .card-body{padding:.5rem}
 .card-title{font-size:1rem;line-height:1.2;margin:0}
 .card-date{font-size:.85rem;margin:.25rem 0}
-.ratings-inline {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: .4rem;
-  font-size: .95rem;
-  color: #555;
-  font-variant-numeric: tabular-nums;
-}
-.ratings-inline span { text-align: center; }
-.ratings-inline .imdb.good { color: #1a7f37; font-weight:bold; }
-.ratings-inline .imdb.ok   { color: #d97706; font-weight:bold; }
-.ratings-inline .imdb.bad  { color: #c11919; font-weight:bold; }
-.ratings-inline .rt.good   { color: #1a7f37; }
-.ratings-inline .rt.ok     { color: #d97706; }
-.ratings-inline .rt.bad    { color: #c11919; }
-.ratings-inline .mc.good   { color: #1a7f37; }
-.ratings-inline .mc.ok     { color: #d97706; }
-.ratings-inline .mc.bad    { color: #c11919; }
+.rating{font-variant-numeric:tabular-nums;font-size:.95rem;margin:0}
+.rating strong{font-weight:bold}
+.rating small{display:block;font-size:.75rem;color:#666}
 @media(prefers-color-scheme:dark){
   body{background:#000;color:#e0e0e0}
   .card{background:#111;border-color:#222}
-  .ratings-inline { color: #ccc }
+  .rating small{color:#888}
 }
 """
 
@@ -246,6 +192,7 @@ HTML_TEMPLATE = """<!doctype html>
 def build_html(shows: List[dict], date: str) -> str:
     cards: List[str] = []
     for show in shows:
+        # Poster fallback: Pathé → OMDb → none
         poster_md = (show.get("posterPath") or {}).get("md")
         img_src   = poster_md or show.get("omdbPoster") or ""
         if img_src:
@@ -253,23 +200,20 @@ def build_html(shows: List[dict], date: str) -> str:
         else:
             img_tag = '<div class="card-no-image">No image</div>'
 
+        # Title / date
         title    = show.get("title","")
         date_str = ", ".join(show.get("releaseAt", []))
 
-        imdb = show.get("omdbRating")
-        rt   = show.get("rtRating")
-        mc   = show.get("mcRating")
+        # Rating + votes
+        rating = show.get("omdbRating","—")
+        votes  = show.get("omdbVotes","")
+        votes_display = votes.replace(",",".") if votes else ""
+        rating_html = f'<div class="rating"><strong>{rating}</strong>'
+        if votes_display:
+            rating_html += f'<br><small>{votes_display} votes</small>'
+        rating_html += "</div>"
 
-        # always three columns, blank if missing
-        spans = []
-        spans.append(f'<span class="imdb {imdb_class(imdb)}">' +
-                     (f'<strong>{imdb}</strong>' if imdb else "") +
-                     "</span>")
-        spans.append(f'<span class="rt {rt_class(rt)}">' + (rt or "") + "</span>")
-        spans.append(f'<span class="mc {mc_class(mc)}">' + (mc or "") + "</span>")
-
-        ratings_html = f'<div class="ratings-inline">{"".join(spans)}</div>'
-
+        # IMDB link
         imdb_id = show.get("imdbID")
         href    = f"https://www.imdb.com/title/{imdb_id}" if imdb_id else "#"
 
@@ -279,15 +223,14 @@ def build_html(shows: List[dict], date: str) -> str:
             f'<div class="card-body">'
             f'<h2 class="card-title">{title}</h2>'
             f'<div class="card-date">{date_str}</div>'
-            f'{ratings_html}'
+            f'{rating_html}'
             f'</div>'
             f'</a>'
         )
         cards.append(card)
 
     now = time.strftime("%Y-%m-%d %H:%M", time.localtime())
-    return HTML_TEMPLATE.format(date=date, css=MOBILE_CSS,
-                                cards="\n    ".join(cards), now=now)
+    return HTML_TEMPLATE.format(date=date, css=MOBILE_CSS, cards="\n    ".join(cards), now=now)
 
 # ────────────────────── CLI / main ─────────────────────
 def parse_args() -> argparse.Namespace:
@@ -309,8 +252,8 @@ def main() -> None:
     if args.debug:
         LOG.setLevel(logging.DEBUG)
 
-    key = args.imdb_key or OMDB_KEY_ENV
-    if key and not args.skip_imdb:
+    imdb_key = args.imdb_key or OMDB_KEY_ENV
+    if imdb_key and not args.skip_imdb:
         LOG.info("✅ OMDb key loaded from %s", "CLI" if args.imdb_key else "environment")
     else:
         LOG.info("ℹ️  OMDb enrichment disabled or key missing")
@@ -318,17 +261,24 @@ def main() -> None:
     LOG.info("🔗 Querying Pathé API for %s …", args.date)
     shows = fetch_shows(args.date)
 
-    if key and not args.skip_imdb:
-        enrich_with_omdb(shows, key)
+    # ─── FILTER to Den Haag zone ──────────────────
+    zone_slugs = fetch_zone_slugs()
+    LOG.info("· filtering to Den Haag zone…")
+    shows = [s for s in shows if s.get("slug") in zone_slugs]
+    LOG.info("· %d shows remain after filtering", len(shows))
+
+    if imdb_key and not args.skip_imdb:
+        enrich_with_omdb(shows, imdb_key)
     else:
         for show in shows:
-            show["omdbRating"] = None
+            show["omdbRating"] = "—"
+            show["omdbVotes"]  = ""
             show["omdbPoster"] = None
             show["imdbID"]     = None
-            show["rtRating"]   = None
-            show["mcRating"]   = None
 
     html = build_html(shows, args.date)
+
+    # ensure output directory exists
     outdir = os.path.dirname(args.output)
     if outdir:
         os.makedirs(outdir, exist_ok=True)
