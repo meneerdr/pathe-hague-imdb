@@ -1,23 +1,83 @@
-<!DOCTYPE html><html lang="nl"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Films in Den Haag • IMDb-score live</title>
-<style>
-:root{--bg:#fafafa;--card:#fff;--text:#222;--accent:#ffcc00;--r:12px;--sh:0 2px 6px rgba(0,0,0,.08);font-size:16px}
-@media(min-width:430px){:root{font-size:18px}}
-@media(prefers-color-scheme:dark){:root{--bg:#111;--card:#1c1c1e;--text:#eee;--accent:#ffd91a}}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;min-height:100vh}
-header{padding:1rem 1.25rem;text-align:center}h1{margin:0;font-size:1.35rem;font-weight:600}
-main{flex:1;padding:0 1rem 2.5rem}ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.75rem}
-.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);display:flex;gap:.9rem;padding:.9rem 1rem}
-.rating{flex:0 0 3.2rem;height:3.2rem;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem}
-.info{flex:1}h2{margin:.05rem 0;font-size:1rem} .meta{font-size:.82rem;opacity:.75;margin-bottom:.25rem}
-.plot{font-size:.82rem}.coming{font-size:.82rem;color:#c00;font-weight:600}
-footer{text-align:center;font-size:.75rem;padding:.75rem 0;opacity:.6}
-</style></head><body>
-<header><h1>Films in Den Haag — gerangschikt op IMDb-score</h1></header>
-<main><ul id="movie-list">
-<!-- MOVIE_ROWS --><!-- script will inject  <li class="card">… here -->
-</ul></main>
-<footer>Laatste update: <span id="stamp">{{DATE}}</span> · Bronnen: Pathé &amp; IMDb</footer>
-</body></html>
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pathé Den Haag Films</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f2f4f6;
+      color: #333;
+    }
+    header {
+      padding: 1rem;
+      text-align: center;
+      background: #005bac;
+      color: white;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    .grid {
+      display: grid;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      /* auto-fit cards at min 140px up to fill */
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+    }
+    .card img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .card .info {
+      padding: 0.5rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .card .title {
+      font-size: 0.9rem;
+      margin: 0 0 0.25rem;
+      line-height: 1.2;
+      flex: none;
+    }
+    .card .meta {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: auto;
+      flex: none;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.7rem;
+      color: #999;
+      padding: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pathé Den Haag Films – {{date}}</h1>
+  </header>
+  <main class="grid">
+    {{cards}}
+  </main>
+  <footer>
+    &copy; {{year}} – Data via Pathé API + OMDb
+  </footer>
+</body>
+</html>
 
