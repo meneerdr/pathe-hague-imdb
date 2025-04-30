@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-scrape.py  –  Pathé Den Haag shows → pretty mobile-friendly HTML cards
+scrape.py  –  Pathé The-Hague titles  ➜  pretty mobile-friendly card grid
 
-Requires    : requests  pandas
-Optional    : tabulate   (for local console preview only)
+◆ Requires : requests  pandas
+◆ Optional : tabulate  (only for console preview)
 
-Environment :
-  OMDB_API_KEY or OMDB_KEY   OMDb / IMDb API key
+Environment
+-----------
+OMDB_KEY or OMDB_API_KEY   –  OMDb / IMDb API key
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,7 +20,7 @@ import logging
 import os
 import sys
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import requests
@@ -26,9 +28,10 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 # ───────────────────────── CONFIG ──────────────────────────
-PATHE_SHOWS_URL = "https://www.pathe.nl/api/shows"
-PAGE_SIZES      = (100, 50, 20)
-DEFAULT_TIMEOUT = 30  # seconds
+PATHÉ_SHOWS_URL = "https://www.pathe.nl/api/shows"
+PAGE_SIZES = (100, 50, 20)
+DEFAULT_TIMEOUT = 30
+
 RETRIES = Retry(
     total=3,
     connect=3,
@@ -37,8 +40,8 @@ RETRIES = Retry(
     status_forcelist=(500, 502, 503, 504),
     allowed_methods={"GET"},
 )
-HEADERS: Dict[str,str] = {
-    # exactly matching the one cURL that always works
+
+HEADERS: Dict[str, str] = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -53,10 +56,10 @@ HEADERS: Dict[str,str] = {
     "Connection": "close",
 }
 
-# OMDb / IMDb
-OMDB_URL        = "https://www.omdbapi.com/"
-OMDB_KEY_ENV    = os.getenv("OMDB_API_KEY") or os.getenv("OMDB_KEY")
-MAX_OMDB_WORKERS= 10
+OMDB_URL = "https://www.omdbapi.com/"
+OMDB_KEY_ENV = os.getenv("OMDB_API_KEY") or os.getenv("OMDB_KEY")
+MAX_OMDB_WORKERS = 10
+
 
 # ───────────────────────── logging ─────────────────────────
 LOG = logging.getLogger("pathe")
@@ -65,6 +68,7 @@ _handler = logging.StreamHandler(sys.stdout)
 _handler.setFormatter(logging.Formatter("%(levelname)-8s %(asctime)s  %(message)s", "%H:%M:%S"))
 LOG.addHandler(_handler)
 
+
 # ──────────────────────── HTTP session ─────────────────────
 def build_session() -> requests.Session:
     sess = requests.Session()
@@ -72,7 +76,9 @@ def build_session() -> requests.Session:
     sess.mount("https://", HTTPAdapter(max_retries=RETRIES, pool_connections=4, pool_maxsize=4))
     return sess
 
+
 SESSION = build_session()
+
 
 def get_json(url: str, *, params: dict, timeout: int = DEFAULT_TIMEOUT) -> dict:
     LOG.debug("GET %s  params=%s", url, params)
@@ -80,11 +86,15 @@ def get_json(url: str, *, params: dict, timeout: int = DEFAULT_TIMEOUT) -> dict:
     resp.raise_for_status()
     return resp.json()
 
+
 # ─────────────────────── Pathé scraping ────────────────────
 def fetch_shows(date: str) -> List[dict]:
     for size in PAGE_SIZES:
         try:
-            data = get_json(PATHE_SHOWS_URL, params={"language": "nl", "date": date, "pageSize": size})
+            data = get_json(
+                PATHÉ_SHOWS_URL,
+                params={"language": "nl", "date": date, "pageSize": size},
+            )
             shows = data.get("shows", [])
             LOG.info("· got %d shows (pageSize=%d)", len(shows), size)
             if shows:
@@ -94,78 +104,107 @@ def fetch_shows(date: str) -> List[dict]:
     LOG.critical("💥 Could not retrieve any shows for %s", date)
     sys.exit(1)
 
+
 # ─────────────────────── IMDb enrichment ───────────────────
-def fetch_rating(title: str, key: str) -> Optional[str]:
+def fetch_rating_and_id(title: str, key: str) -> Tuple[Optional[str], str]:
+    """
+    Returns (rating, imdbID) or (None, "") on failure.
+    """
     try:
-        data = get_json(OMDB_URL, params={"apikey": key, "t": title, "r": "json"}, timeout=10)
+        data = get_json(
+            OMDB_URL,
+            params={"apikey": key, "t": title, "r": "json"},
+            timeout=10,
+        )
         if data.get("Response") == "True":
             rating = data.get("imdbRating")
+            imdbid = data.get("imdbID", "")
             if rating and rating != "N/A":
-                return rating
+                return rating, imdbid
     except Exception as exc:
         LOG.debug("OMDb lookup failed for %s – %s", title, exc)
-    return None
+    return None, ""
 
-def add_imdb_ratings(shows: List[dict], key: str) -> None:
-    LOG.info("🔍 fetching IMDb ratings … (max %d threads)", MAX_OMDB_WORKERS)
+
+def add_imdb_details(shows: List[dict], key: str) -> None:
+    LOG.info("🔍 fetching IMDb ratings & IDs … (max %d threads)", MAX_OMDB_WORKERS)
     with cf.ThreadPoolExecutor(max_workers=MAX_OMDB_WORKERS) as pool:
-        futures = {pool.submit(fetch_rating, s["title"], key): s for s in shows}
+        futures = {pool.submit(fetch_rating_and_id, s["title"], key): s for s in shows}
         for fut in cf.as_completed(futures):
-            futures[fut]["imdbRating"] = fut.result() or "—"
+            show = futures[fut]
+            rating, imdbid = fut.result()
+            show["imdbRating"] = rating or "—"
+            show["imdbID"] = imdbid or ""
 
-# ────────────────────────── CSS + HTML ─────────────────────
-CARD_CSS = """
+
+# ───────────────────────── HTML + CSS ─────────────────────
+MOBILE_CSS = """
+:root{--gap:.75rem;--card-bg:#fff;--card-shadow:rgba(0,0,0,0.1);}
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  margin: 0; padding: 1rem; background: #fafafa;
+  margin:1rem;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 h1 {
-  font-size: 1.5rem; margin-bottom: 1rem;
+  font-size:1.5rem;
+  margin:0 0 1rem;
+  display:flex;
+  align-items:center;
 }
-.cards {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-@media (min-width: 480px) {
-  .cards {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  }
+h1::before { content:"🎬"; margin-right:.5rem; }
+.grid {
+  display:grid;
+  gap:var(--gap);
+  grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
 }
 .card {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  background:var(--card-bg);
+  border-radius:8px;
+  box-shadow:0 1px 3px var(--card-shadow);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
 }
 .card img {
-  width: 100%; display: block;
+  width:100%;
+  display:block;
+  aspect-ratio:2/3;
+  object-fit:cover;
 }
-.card-body {
-  padding: 0.5rem;
+.info {
+  padding:.5rem;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
 }
-.card-body h2 {
-  font-size: 1rem; margin: 0 0 0.5rem;
+.info h2 {
+  font-size:1rem;
+  margin:0 0 .5rem;
 }
-.card-body .release {
-  font-size: 0.85rem; color: #555; margin: 0 0 0.5rem;
+.release { font-size:.85rem; color:#555; margin:0 0 .5rem; }
+.rating {
+  font-variant-numeric:tabular-nums;
+  font-weight:600;
 }
-.card-body .rating {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+.rating.good { color:#1a7f37; }
+.rating.ok   { color:#d97706; }
+.rating.bad  { color:#c11919; }
+footer {
+  margin-top:1rem;
+  font-size:.75rem;
+  text-align:center;
+  color:#666;
 }
-.card-body .rating.good { color: #1a7f37; }
-.card-body .rating.ok   { color: #d97706; }
-.card-body .rating.bad  { color: #c11919; }
-
-@media (prefers-color-scheme: dark) {
-  body { background: #111; color: #ddd; }
-  .card { background: #222; box-shadow: 0 2px 6px rgba(0,0,0,0.6); }
-  .card-body .release { color: #aaa; }
+@media (prefers-color-scheme:dark) {
+  body { background:#000; color:#e0e0e0; }
+  .card { background:#111; box-shadow:0 1px 3px rgba(0,0,0,0.7); }
+  .release { color:#aaa; }
+  footer { color:#888; }
 }
 """
 
-HTML_TEMPLATE = """<!doctype html>
+HTML_TEMPLATE = """\
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -174,114 +213,123 @@ HTML_TEMPLATE = """<!doctype html>
   <style>{css}</style>
 </head>
 <body>
-  <h1>🎬 Pathé Den Haag · {date}</h1>
-  <div class="cards">
+  <h1>Pathé Den Haag · {date}</h1>
+  <div class="grid">
     {cards}
   </div>
-  <footer style="margin-top:1rem; font-size:0.75rem; text-align:center;">
+  <footer>
     Generated {now} · Source: Pathé API + OMDb
   </footer>
 </body>
-</html>"""
+</html>
+"""
+
 
 def rating_class(rating: str) -> str:
     try:
         val = float(rating)
-        if val >= 7.5: return "good"
-        if val >= 5.0: return "ok"
+        if val >= 7.5:
+            return "good"
+        if val >= 5.0:
+            return "ok"
         return "bad"
     except Exception:
         return ""
 
 
-def build_html(shows: List[dict], as_of: str) -> str:
-    now = time.strftime("%Y-%m-%d %H:%M")
-    cards_html: List[str] = []
+def build_html(shows: List[dict], date: str) -> str:
+    # Sort by numeric rating desc, unranked ("—") last
+    def sort_key(s: dict) -> float:
+        r = s.get("imdbRating", "—")
+        try:
+            return float(r)
+        except Exception:
+            return -1.0
+
+    shows = sorted(shows, key=sort_key, reverse=True)
+
+    cards: list[str] = []
     for s in shows:
-        title   = s.get("title", "")
-        release = ", ".join(s.get("releaseAt", []))
-        imdb    = s.get("imdbRating", "—")
-        cls     = rating_class(imdb)
+        title     = s["title"]
+        release   = ", ".join(s.get("releaseAt", []))
+        rating    = s.get("imdbRating", "—")
+        imdbid    = s.get("imdbID", "")
+        poster_md = (s.get("posterPath") or {}).get("md", "")
+        link      = f"https://www.imdb.com/title/{imdbid}/" if imdbid else "#"
+        cls       = rating_class(rating)
 
-        # guard against null posterPath
-        poster = s.get("posterPath") or {}
-        img     = poster.get("md") or poster.get("lg") or ""
-
-        cards_html.append(
+        cards.append(
             f"<div class='card'>"
-            f"  <img src='{img}' alt='Poster for {title}'>"
-            f"  <div class='card-body'>"
-            f"    <h2>{title}</h2>"
-            f"    <p class='release'>{release}</p>"
-            f"    <p class='rating {cls}'>{imdb}</p>"
-            f"  </div>"
+            f"<a href='{link}' target='_blank' rel='noopener'>"
+            f"<img src='{poster_md}' alt='{title} poster'/>"
+            f"</a>"
+            f"<div class='info'>"
+            f"<h2>{title}</h2>"
+            f"<p class='release'>{release}</p>"
+            f"<p class='rating {cls}'>{rating}</p>"
+            f"</div>"
             f"</div>"
         )
 
-    return HTML_TEMPLATE.format(
-        date=as_of,
-        now=now,
-        css=CARD_CSS,
-        cards="\n    ".join(cards_html),
-    )
+    now = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+    return HTML_TEMPLATE.format(date=date, now=now, css=MOBILE_CSS, cards="\n    ".join(cards))
+
 
 # ────────────────────────── CLI / main ─────────────────────
 def parse_args() -> argparse.Namespace:
     today = dt.date.today().isoformat()
-    p = argparse.ArgumentParser(
-        description="Fetch Pathé Den Haag shows and build card-style HTML."
-    )
-    p.add_argument("--date",     default=today,   metavar="YYYY-MM-DD",
-                   help="date to query (default: today)")
+    p = argparse.ArgumentParser(description="Fetch Pathé Den Haag shows → mobile card grid HTML")
+    p.add_argument("--date", default=today, metavar="YYYY-MM-DD", help="date to query (default: today)")
     p.add_argument("--imdb-key", help="override OMDb key")
-    p.add_argument("--skip-imdb",action="store_true", help="disable IMDb enrichment")
-    p.add_argument("--debug",    action="store_true", help="verbose logging")
-    p.add_argument("--output",   default="index.html",
-                   help="output HTML file (default: index.html)")
+    p.add_argument("--skip-imdb", action="store_true", help="disable IMDb enrichment")
+    p.add_argument("--debug", action="store_true", help="verbose logging")
+    p.add_argument("--output", default="index.html", help="output HTML file (default: index.html)")
     return p.parse_args()
 
+
 def console_preview(shows: List[dict]) -> None:
-    df = pd.DataFrame.from_records([{
-        "Title": s["title"],
-        "Release": ", ".join(s.get("releaseAt", [])),
-        "IMDb": s.get("imdbRating","—")
-    } for s in shows])
+    """Fallback console preview via pandas + tabulate."""
+    df = pd.DataFrame.from_records(
+        [{"Title": s["title"], "Release": ", ".join(s.get("releaseAt", [])), "IMDb": s.get("imdbRating", "—")}
+         for s in shows]
+    )
     try:
-        from tabulate import tabulate
+        from tabulate import tabulate  # type: ignore
         print(tabulate(df, headers="keys", tablefmt="github", showindex=False))
     except ImportError:
-        LOG.debug("tabulate not installed – plain text preview")
+        LOG.debug("tabulate not installed – showing plain table")
         print(df.to_string(index=False))
 
+
 def main() -> None:
-    args     = parse_args()
+    args = parse_args()
     if args.debug:
         LOG.setLevel(logging.DEBUG)
 
     imdb_key = args.imdb_key or OMDB_KEY_ENV
     if imdb_key:
-        LOG.info("✅ IMDb key loaded from %s",
-                 "CLI" if args.imdb_key else "environment")
+        LOG.info("✅ IMDb key from %s", "CLI" if args.imdb_key else "env")
     else:
-        LOG.info("ℹ️  No IMDb key found – skipping ratings")
+        LOG.info("ℹ️  No IMDb key found, skipping ratings/links")
 
-    LOG.info("🔗  Querying Pathé API for %s …", args.date)
+    LOG.info("🔗  Querying Pathé JSON API for %s …", args.date)
     shows = fetch_shows(args.date)
 
     if imdb_key and not args.skip_imdb:
-        add_imdb_ratings(shows, imdb_key)
+        add_imdb_details(shows, imdb_key)
     else:
         for s in shows:
             s["imdbRating"] = "—"
+            s["imdbID"] = ""
 
-    # build the HTML and write it out
+    LOG.info("✅  Building HTML …")
     html = build_html(shows, args.date)
     with open(args.output, "w", encoding="utf-8") as fh:
         fh.write(html)
-    LOG.info("✅ wrote %s (%d bytes)", args.output, len(html))
+    LOG.info("✅  Wrote %s (%d bytes)", args.output, len(html))
 
-    # optional console preview
     console_preview(shows)
+
 
 if __name__ == "__main__":
     main()
