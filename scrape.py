@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-scrape.py  –  Pathé The-Hague titles  ➜  pretty mobile-friendly HTML cards
+scrape.py  –  Pathé Den Haag shows ➜ mobile-friendly card layout HTML
 
-◆ Requires : requests  pandas
-◆ Optional : tabulate  (only for console preview)
-
-Environment
------------
-OMDB_KEY or OMDB_API_KEY   –  your OMDb / IMDb API key
+◆ Requires : requests
+◆ Environment
+   OMDB_API_KEY or OMDB_KEY – OMDb / IMDb API key
 """
 
 from __future__ import annotations
@@ -22,15 +19,14 @@ import sys
 import time
 from typing import Dict, List
 
-import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-# ───────────────────────── CONFIG ──────────────────────────
+# ─────────────────────── CONFIG ───────────────────────
 PATHÉ_SHOWS_URL = "https://www.pathe.nl/api/shows"
 PAGE_SIZES = (100, 50, 20)
-DEFAULT_TIMEOUT = 30  # seconds
+DEFAULT_TIMEOUT = 30
 
 RETRIES = Retry(
     total=3,
@@ -60,33 +56,36 @@ OMDB_URL = "https://www.omdbapi.com/"
 OMDB_KEY_ENV = os.getenv("OMDB_API_KEY") or os.getenv("OMDB_KEY")
 MAX_OMDB_WORKERS = 10
 
-# ───────────────────────── logging ─────────────────────────
+# ─────────────────────── logging ───────────────────────
 LOG = logging.getLogger("pathe")
 LOG.setLevel(logging.INFO)
 _handler = logging.StreamHandler(sys.stdout)
 _handler.setFormatter(logging.Formatter("%(levelname)-8s %(asctime)s  %(message)s", "%H:%M:%S"))
 LOG.addHandler(_handler)
 
-# ──────────────────────── HTTP session ─────────────────────
+# ───────────────────── HTTP session ─────────────────────
 def build_session() -> requests.Session:
     sess = requests.Session()
     sess.headers.update(HEADERS)
-    sess.mount("https://", HTTPAdapter(max_retries=RETRIES, pool_connections=4, pool_maxsize=4))
+    sess.mount("https://", HTTPAdapter(max_retries=RETRIES))
     return sess
 
 SESSION = build_session()
 
 def get_json(url: str, *, params: dict, timeout: int = DEFAULT_TIMEOUT) -> dict:
-    LOG.debug("GET %s  params=%s", url, params)
+    LOG.debug("GET %s params=%s", url, params)
     resp = SESSION.get(url, params=params, timeout=timeout)
     resp.raise_for_status()
     return resp.json()
 
-# ─────────────────────── Pathé scraping ────────────────────
+# ──────────────────── Pathé shows ───────────────────────
 def fetch_shows(date: str) -> List[dict]:
     for size in PAGE_SIZES:
         try:
-            data = get_json(PATHÉ_SHOWS_URL, params={"language": "nl", "date": date, "pageSize": size})
+            data = get_json(
+                PATHÉ_SHOWS_URL,
+                params={"language": "nl", "date": date, "pageSize": size},
+            )
             shows = data.get("shows", [])
             LOG.info("· got %d shows (pageSize=%d)", len(shows), size)
             if shows:
@@ -96,162 +95,83 @@ def fetch_shows(date: str) -> List[dict]:
     LOG.critical("💥 Could not retrieve any shows for %s", date)
     sys.exit(1)
 
-# ─────────────────────── IMDb enrichment ───────────────────
-def fetch_imdb_data(title: str, key: str) -> dict:
-    out = {"imdbRating": None, "imdbVotes": None, "imdbPoster": None, "imdbID": None}
+# ──────────────────── OMDb enrichment ───────────────────
+def fetch_omdb_data(show: dict, key: str) -> dict:
+    # Prefer originalTitle if provided
+    title = show.get("originalTitle") or show.get("title")
+    # Disambiguate by year: productionYear or first releaseAt
+    year = show.get("productionYear")
+    if not year:
+        dates = show.get("releaseAt") or []
+        if dates:
+            year = dates[0][:4]
+    params: Dict[str, str] = {
+        "apikey": key,
+        "t": title,
+        "type": "movie",
+        "r": "json",
+    }
+    if year:
+        params["y"] = str(year)
     try:
-        data = get_json(OMDB_URL, params={"apikey": key, "t": title, "r": "json"}, timeout=10)
-        if data.get("Response") == "True":
-            if (r := data.get("imdbRating")) not in (None, "N/A"):
-                out["imdbRating"] = r
-            if (v := data.get("imdbVotes")) not in (None, "N/A"):
-                out["imdbVotes"] = v
-            if (p := data.get("Poster")) not in (None, "N/A"):
-                out["imdbPoster"] = p
-            if (i := data.get("imdbID")):
-                out["imdbID"] = i
-    except Exception:
-        LOG.debug("OMDb lookup failed for %s", title, exc_info=True)
-    return out
+        data = get_json(OMDB_URL, params=params, timeout=10)
+        if data.get("Response") != "True":
+            return {}
+        return {
+            "imdbRating": data.get("imdbRating") if data.get("imdbRating") not in ("N/A", None) else None,
+            "imdbVotes": data.get("imdbVotes") if data.get("imdbVotes") not in ("N/A", None) else None,
+            "imdbID": data.get("imdbID"),
+            "poster": data.get("Poster") if data.get("Poster") not in ("N/A", None) else None,
+        }
+    except Exception as exc:
+        LOG.warning("OMDb lookup failed for %s – %s", title, exc)
+        return {}
 
-def add_imdb_data(shows: List[dict], key: str) -> None:
-    LOG.info("🔍 fetching IMDb data … (max %d threads)", MAX_OMDB_WORKERS)
+def enrich_with_omdb(shows: List[dict], key: str) -> None:
+    LOG.info("🔍 fetching OMDb data … (max %d threads)", MAX_OMDB_WORKERS)
     with cf.ThreadPoolExecutor(max_workers=MAX_OMDB_WORKERS) as pool:
-        futures = {pool.submit(fetch_imdb_data, s["title"], key): s for s in shows}
+        futures = {pool.submit(fetch_omdb_data, show, key): show for show in shows}
         for fut in cf.as_completed(futures):
-            data = fut.result()
             show = futures[fut]
-            show["imdbRating"] = data["imdbRating"] or "—"
-            show["imdbVotes"]  = data["imdbVotes"]  or ""
-            show["imdbPoster"] = data["imdbPoster"] or ""
-            show["imdbID"]     = data["imdbID"]     or ""
+            data = fut.result() or {}
+            show["omdbRating"] = data.get("imdbRating") or "—"
+            show["omdbVotes"]  = data.get("imdbVotes")  or ""
+            show["omdbPoster"] = data.get("poster")
+            show["imdbID"]     = data.get("imdbID")
 
-# ────────────────────────── CSS + HTML ────────────────────
+# ──────────────────── HTML output ───────────────────────
 MOBILE_CSS = """
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  margin: 1rem;
-}
-h1 {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-}
-h1 a {
-  margin-left: .5rem;
-  font-size: .875rem;
-  text-decoration: none;
-  color: #0366d6;
-}
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
-  gap: 1rem;
-}
-.card {
-  background: #fff;
-  border-radius: .5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.card img {
-  width: 100%;
-  display: block;
-}
-.card h2 {
-  font-size: 1rem;
-  margin: .25rem .5rem 0;
-}
-.card time {
-  margin: .1rem .5rem .25rem;
-  color: #666;
-  font-size: .875rem;
-}
-.rating {
-  margin: .1rem .5rem 0;
-  font-size: .875rem;
-}
-.rating.good { color: #1a7f37; }
-.rating.ok   { color: #d97706; }
-.rating.bad  { color: #c11919; }
-.rating strong { font-weight: bold; }
-.votes {
-  margin: .05rem .5rem .5rem;
-  font-size: .75rem;
-  color: #444;
-}
-@media(prefers-color-scheme:dark) {
-  body { background: #000; color: #e0e0e0; }
-  .card { background: #111; }
-  .card time { color: #aaa; }
+body{margin:1rem;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+h1{font-size:1.5rem;margin:0 0 1rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
+.card{display:block;border:1px solid #ddd;border-radius:8px;overflow:hidden;text-decoration:none;color:inherit;background:#fff}
+.card img{width:100%;display:block}
+.card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;color:#666;font-size:.8rem}
+.card-body{padding:.5rem}
+.card-title{font-size:1rem;line-height:1.2;margin:0}
+.card-date{font-size:.85rem;margin:.25rem 0}
+.rating{font-variant-numeric:tabular-nums;font-size:.95rem;margin:0}
+.rating strong{font-weight:bold}
+.rating small{display:block;font-size:.75rem;color:#666}
+@media(prefers-color-scheme:dark){
+  body{background:#000;color:#e0e0e0}
+  .card{background:#111;border-color:#222}
+  .rating small{color:#888}
 }
 """
 
-def rating_class(rating: str) -> str:
-    try:
-        val = float(rating)
-        if val >= 7.5:
-            return "good"
-        if val >= 5.0:
-            return "ok"
-        return "bad"
-    except ValueError:
-        return ""
-
-def build_html(shows: List[dict], date: str) -> str:
-    now = time.strftime("%Y-%m-%d %H:%M")
-    header = f'<h1>🎬 Pathé Den Haag · {date}<a href="#unrated">· Unrated</a></h1>'
-    cards_html: List[str] = []
-    anchor_added = False
-    placeholder = "https://via.placeholder.com/300x450?text=No+Poster"
-
-    for s in shows:
-        title   = s["title"]
-        release = ", ".join(s.get("releaseAt", []))
-
-        # pick Pathé poster, else OMDb fallback, else placeholder
-        pp = s.get("posterPath")
-        poster_md = pp.get("md") if isinstance(pp, dict) else None
-        poster = poster_md or s.get("imdbPoster") or placeholder
-
-        imdb    = s.get("imdbRating", "—")
-        votes   = s.get("imdbVotes", "").replace(",", ".")
-        imdb_id = s.get("imdbID", "")
-        imdb_url = f"https://www.imdb.com/title/{imdb_id}/" if imdb_id else "#"
-
-        anchor = ''
-        if imdb == "—" and not anchor_added:
-            anchor = ' id="unrated"'
-            anchor_added = True
-
-        rating_html = f'<div class="rating {rating_class(imdb)}"><strong>{imdb}</strong></div>'
-        votes_html  = f'<div class="votes">{votes} votes</div>' if votes else ""
-
-        cards_html.append(f"""
-      <div class="card"{anchor}>
-        <a href="{imdb_url}" target="_blank" rel="noopener">
-          <img src="{poster}" alt="{title} poster" loading="lazy"/>
-        </a>
-        <h2>{title}</h2>
-        <time datetime="{release}">{release}</time>
-        {rating_html}
-        {votes_html}
-      </div>
-        """)
-
-    return f"""<!doctype html>
+HTML_TEMPLATE = """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Pathé Den Haag – {date}</title>
+  <title>🎬 Pathé Den Haag · {date}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>{MOBILE_CSS}</style>
+  <style>{css}</style>
 </head>
 <body>
-  {header}
-  <div class="cards">
-{''.join(cards_html)}
+  <h1>🎬 Pathé Den Haag · {date}</h1>
+  <div class="grid">
+    {cards}
   </div>
   <footer style="margin-top:1rem;font-size:.75rem;">
     Generated {now} · Source: Pathé API + OMDb
@@ -260,15 +180,63 @@ def build_html(shows: List[dict], date: str) -> str:
 </html>
 """
 
-# ────────────────────────── CLI / main ─────────────────────
+def build_html(shows: List[dict], date: str) -> str:
+    cards: List[str] = []
+    for show in shows:
+        # Poster fallback: Pathé → OMDb → none
+        poster_md = (show.get("posterPath") or {}).get("md")
+        img_src   = poster_md or show.get("omdbPoster") or ""
+        if img_src:
+            img_tag = f'<img src="{img_src}" alt="{show.get("title","")} poster">'
+        else:
+            img_tag = '<div class="card-no-image">No image</div>'
+
+        # Title / date
+        title    = show.get("title","")
+        date_str = ", ".join(show.get("releaseAt", []))
+
+        # Rating + votes
+        rating  = show.get("omdbRating","—")
+        votes   = show.get("omdbVotes","")
+        # convert OMDb comma-grouping to dot-grouping
+        votes_display = votes.replace(",",".") if votes else ""
+        rating_html = f'<div class="rating"><strong>{rating}</strong>'
+        if votes_display:
+            rating_html += f'<br><small>{votes_display} votes</small>'
+        rating_html += "</div>"
+
+        # IMDB link
+        imdb_id = show.get("imdbID")
+        href    = f"https://www.imdb.com/title/{imdb_id}" if imdb_id else "#"
+
+        card = (
+            f'<a class="card" href="{href}" target="_blank">'
+            f'{img_tag}'
+            f'<div class="card-body">'
+            f'<h2 class="card-title">{title}</h2>'
+            f'<div class="card-date">{date_str}</div>'
+            f'{rating_html}'
+            f'</div>'
+            f'</a>'
+        )
+        cards.append(card)
+
+    now = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+    return HTML_TEMPLATE.format(date=date, css=MOBILE_CSS, cards="\n    ".join(cards), now=now)
+
+# ────────────────────── CLI / main ─────────────────────
 def parse_args() -> argparse.Namespace:
     today = dt.date.today().isoformat()
-    p = argparse.ArgumentParser(description="Fetch Pathé Den Haag shows and build HTML cards.")
-    p.add_argument("--date",     default=today,      metavar="YYYY-MM-DD", help="date to query (default: today)")
-    p.add_argument("--imdb-key", help="override OMDb key")
-    p.add_argument("--skip-imdb",action="store_true", help="disable IMDb enrichment")
-    p.add_argument("--debug",    action="store_true", help="verbose logging")
-    p.add_argument("--output",   default="public/index.html", help="output HTML file")
+    p = argparse.ArgumentParser(description="Fetch Pathé Den Haag shows → HTML cards")
+    p.add_argument("--date", default=today, metavar="YYYY-MM-DD",
+                   help="which date to query (default: today)")
+    p.add_argument("--imdb-key", help="override OMDb API key")
+    p.add_argument("--skip-imdb", action="store_true",
+                   help="do not enrich with OMDb data")
+    p.add_argument("--output", default="index.html",
+                   help="output HTML file path")
+    p.add_argument("--debug", action="store_true",
+                   help="enable debug logging")
     return p.parse_args()
 
 def main() -> None:
@@ -277,37 +245,30 @@ def main() -> None:
         LOG.setLevel(logging.DEBUG)
 
     imdb_key = args.imdb_key or OMDB_KEY_ENV
-    if imdb_key:
-        LOG.info("✅ IMDb key loaded from %s", "CLI" if args.imdb_key else "environment")
+    if imdb_key and not args.skip_imdb:
+        LOG.info("✅ OMDb key loaded from %s", "CLI" if args.imdb_key else "environment")
     else:
-        LOG.info("ℹ️  No IMDb key found – ratings will be skipped")
+        LOG.info("ℹ️  OMDb enrichment disabled or key missing")
 
-    LOG.info("🔗  Querying Pathé JSON API for %s …", args.date)
+    LOG.info("🔗 Querying Pathé API for %s …", args.date)
     shows = fetch_shows(args.date)
 
     if imdb_key and not args.skip_imdb:
-        add_imdb_data(shows, imdb_key)
+        enrich_with_omdb(shows, imdb_key)
     else:
-        for s in shows:
-            s["imdbRating"] = "—"
-            s["imdbVotes"]  = ""
-            s["imdbPoster"] = ""
-            s["imdbID"]     = ""
-
-    # ── **NEW**: sort by IMDb rating desc, unrated (“—”) forced to bottom
-    def _sort_key(s: dict) -> float:
-        r = s.get("imdbRating", "—")
-        try:
-            return float(r)
-        except ValueError:
-            return -1.0
-    shows.sort(key=_sort_key, reverse=True)
+        # stub out empty OMDb fields
+        for show in shows:
+            show["omdbRating"] = "—"
+            show["omdbVotes"]  = ""
+            show["omdbPoster"] = None
+            show["imdbID"]     = None
 
     html = build_html(shows, args.date)
 
-    out_dir = os.path.dirname(args.output)
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
+    # make sure output dir exists
+    outdir = os.path.dirname(args.output)
+    if outdir:
+        os.makedirs(outdir, exist_ok=True)
 
     with open(args.output, "w", encoding="utf-8") as fh:
         fh.write(html)
