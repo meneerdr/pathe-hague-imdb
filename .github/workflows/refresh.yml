@@ -1,25 +1,42 @@
 name: refresh-site
+
 on:
   schedule:
-    - cron:  '0 5 * * *'        # every day 05:00 UTC ≈ 07:00 CET
-  workflow_dispatch:            # run manually from the Actions tab
+    # Every day 05:00 UTC  (≈ 07:00 CET)
+    - cron: '0 5 * * *'
+  workflow_dispatch:       # makes the green “Run workflow” button appear
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4             # :contentReference[oaicite:0]{index=0}
-      - uses: actions/setup-python@v5         # :contentReference[oaicite:1]{index=1}
-        with: { python-version: '3.11' }
-      - name: Install Python deps
+      # 1. Check out repo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Install Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 3. Install project deps
+      - name: Install dependencies
         run: pip install -r requirements.txt
+
+      # 4. Run scraper → generates index.html
       - name: Run scraper
-        env: { OMDB_KEY: ${{ secrets.OMDB_KEY }} }
+        env:
+          OMDB_KEY: ${{ secrets.OMDB_KEY }}
         run: python scrape.py
-      - name: Commit & push if changed
+
+      # 5. Commit & push new index.html (if changed)
+      - name: Commit & push
         run: |
           git config --global user.name  github-actions
           git config --global user.email actions@github.com
           git add index.html
-          git commit -m "auto: refresh $(date -u '+%Y-%m-%d')" || exit 0
+          git commit -m "auto: refresh $(date -u '+%Y-%m-%d')" || echo "Nothing to commit"
           git push
 
