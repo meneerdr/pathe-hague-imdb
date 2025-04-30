@@ -1,0 +1,30 @@
+name: Update Pathé page
+on:
+  schedule:
+    - cron: '0 6 * * *'     # 08:00 CET daily
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install -r requirements.txt
+
+      - name: Run scraper
+        env:
+          OMDB_KEY: ${{ secrets.OMDB_KEY }}
+        run: python scrape.py --output index.html
+
+      - name: Commit & push generated page
+        run: |
+          git config user.name  "github-actions"
+          git config user.email "github-actions@github.com"
+          git add index.html
+          git commit -m "chore: update page $(date -u +'%F')" || echo "nothing to commit"
+          git push
