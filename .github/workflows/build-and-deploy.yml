@@ -1,22 +1,25 @@
 name: build-and-deploy
 
 on:
-  workflow_dispatch:           # manual trigger
+  push:
+    branches: [ main ]
+  workflow_dispatch:
   schedule:
-    - cron:  '0 5 * * *'       # daily at 05:00 UTC (≈07:00 NL time)
+    # Every day at 04:00 UTC (≈06:00 NL) and 14:00 UTC (≈16:00 NL)
+    - cron: '0 4 * * *'
+    - cron: '0 14 * * *'
 
-permissions:                   # required for Pages-via-Actions
+permissions:
   contents: read
-  pages: write
-  id-token: write
+  pages: write      # needed to push to gh-pages
+  id-token: write   # needed for pages action
 
 env:
-  OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}   # pass the secret
+  OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -26,14 +29,20 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: generate site
+      - name: build html
         run: |
-          python scrape.py               # writes public/index.html
+          mkdir -p public
+          python scrape.py --output public/index.html
           echo "<!-- built $(date -u) -->" >> public/index.html
 
-      - uses: actions/upload-pages-artifact@v2
+      - uses: actions/upload-pages-artifact@v3
         with:
-          path: public                   # folder to publish
+          path: public
 
-      - uses: actions/deploy-pages@v2    # 🚀 deploys to Pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: github-pages
+    steps:
+      - uses: actions/deploy-pages@v4
 
