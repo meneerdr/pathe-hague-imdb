@@ -1,12 +1,8 @@
-# Python
+# Local dev stuff
+.venv/
 __pycache__/
 *.pyc
-
-# Env / IDEs
-.venv/
-.env
-.idea/
-.vscode/
-
-# OS files
 .DS_Store
+
+# Generated site — gh-pages will hold the deployable copy
+index.html
