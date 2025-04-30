@@ -1,0 +1,39 @@
+name: build-and-deploy
+
+on:
+  workflow_dispatch:           # manual trigger
+  schedule:
+    - cron:  '0 5 * * *'       # daily at 05:00 UTC (≈07:00 NL time)
+
+permissions:                   # required for Pages-via-Actions
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}   # pass the secret
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install -r requirements.txt
+
+      - name: generate site
+        run: |
+          python scrape.py               # writes public/index.html
+          echo "<!-- built $(date -u) -->" >> public/index.html
+
+      - uses: actions/upload-pages-artifact@v2
+        with:
+          path: public                   # folder to publish
+
+      - uses: actions/deploy-pages@v2    # 🚀 deploys to Pages
+

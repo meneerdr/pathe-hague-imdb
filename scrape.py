@@ -254,7 +254,10 @@ def main() -> None:
     # Optional quick preview in console
     console_preview(df)
 
-
 if __name__ == "__main__":
-    main()
+    html = build_html()        # whatever returns the HTML string
+    out = Path(sys.argv[1] if len(sys.argv) > 1 else "public/index.html")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(html, encoding="utf-8")
+
 
