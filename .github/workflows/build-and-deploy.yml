@@ -35,6 +35,11 @@ jobs:
           python scrape.py --output public/index.html
           echo "<!-- built $(date -u) -->" >> public/index.html
 
+      - name: copy logos into public
+        run: |
+          mkdir -p public/logos
+          cp logos/*.svg public/logos/
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

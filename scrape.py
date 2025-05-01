@@ -121,6 +121,22 @@ def fetch_cinema_slugs(cinema_slug: str, date: str) -> Set[str]:
     LOG.warning("· unexpected .shows for %s: %r", cinema_slug, shows_obj)
     return set()
 
+def fetch_zone_shows() -> dict:
+    """ Fetch shows from the Den Haag zone to retrieve kids data and other info """
+    LOG.info("🔗 Fetching Den Haag zone shows …")
+    data = get_json(ZONE_URL, params={"language":"nl"})
+    shows = {s["slug"]: s for s in data.get("shows", []) if "slug" in s}
+    LOG.info("· Got %d zone shows", len(shows))
+    return shows
+
+def fetch_zone_data() -> Dict[str, dict]:
+    """ Fetch only kids data from the Den Haag zone """
+    LOG.info("🔗 Fetching zone data for Den Haag …")
+    data = get_json(ZONE_URL, params={"language":"nl"})
+    zone_data = {}
+    for show in data.get("shows", []):
+        zone_data[show["slug"]] = {"isKids": show.get("isKids", False)}
+    return zone_data
 
 # ──────────────────── OMDb enrichment ───────────────────
 def fetch_omdb_data(show: dict, key: str) -> dict:
@@ -323,6 +339,33 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-size: 0.8rem;
 }
 
+.release-date-button {
+  background-color: lightgray;
+  color: white;
+  padding: 2px 5px;
+  font-weight: bold;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.book-button {
+  background-color: darkblue;
+  color: white;
+  padding: 2px 5px;
+  font-weight: bold;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.soon-button {
+  background-color: lightblue;
+  color: white;
+  padding: 2px 5px;
+  font-weight: bold;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
 /* Dark Mode Adjustments */
 @media(prefers-color-scheme:dark){
   body { background:#000; color:#e0e0e0; }
@@ -334,11 +377,11 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 HTML_TMPL = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-  <title>🎬 Pathé Den Haag · {date}</title>
+  <title>🎬 Pathé Den Haag · {formatted_date}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>{css}</style>
 </head><body>
-  <h1>🎬 Pathé Den Haag · {date}</h1>
+  <h1>🎬 Pathé Den Haag · {formatted_date}</h1>
   <div class="grid">
     {cards}
   </div>
@@ -348,28 +391,8 @@ HTML_TMPL = """<!doctype html>
 </body></html>
 """
 
-def fetch_zone_shows() -> dict:
-    """ Fetch shows from the Den Haag zone, to retrieve kids data and other info """
-    LOG.info("🔗 Fetching Den Haag zone shows …")
-    data = get_json(ZONE_URL, params={"language":"nl"})
-    shows = {s["slug"]: s for s in data.get("shows", []) if "slug" in s}
-    LOG.info("· Got %d zone shows", len(shows))
-    return shows
-
-def fetch_cinema_shows(cinema_slug: str, date: str) -> dict:
-    """ Fetch shows from a specific cinema endpoint to get kids data and other info """
-    url = CINEMA_URL_TMPL.format(slug=cinema_slug)
-    LOG.info("🔗 Fetching cinema shows for %s …", cinema_slug)
-    data = get_json(url, params={"language":"nl", "date":date})
-    shows = {s["slug"]: s for s in data.get("shows", {}).values() if "slug" in s}
-    LOG.info("· Got %d shows for %s", len(shows), cinema_slug)
-    return shows
-
-def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]]) -> str:
-    # Fetch zone data for kids-movie info (or fetch per cinema if you prefer)
-    zone_shows = fetch_zone_shows()  # Fetch shows from zone (Den Haag specific)
-
-    formatted_date = dt.datetime.strptime(date, "%Y-%m-%d").strftime("%B %d")
+def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_data: Dict[str, dict]) -> str:
+    formatted_date = dt.datetime.strptime(date, "%Y-%m-%d").strftime("%B %-d")  # Correct format for month and day
 
     cards: List[str] = []
     for s in shows:
@@ -382,19 +405,19 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]]) -> st
         title = s.get("title", "")
 
         # Fetch true value for isKids (this will pull from the Den Haag zone or cinema-specific data)
-        is_kids = zone_shows.get(s.get("slug", ""), {}).get("isKids", False)
+        is_kids = zone_data.get(s.get("slug", ""), {}).get("isKids", False)
 
         # Create buttons for the movie based on Pathé API data
         buttons = []
-
-        # "Kids" button if movie is a kids movie
-        if is_kids:
-            buttons.append(f'<span class="kids-button">Kids</span>')
 
         # "Next Showtimes" button
         next_showtimes = s.get("next24ShowtimesCount", 0)
         if next_showtimes > 0:
             buttons.append(f'<span class="next-showtimes-button">{next_showtimes}/24</span>')
+
+        # "Kids" button if movie is a kids movie
+        if is_kids:
+            buttons.append(f'<span class="kids-button">Kids</span>')
 
         # "Event" button
         if s.get("specialEvent"):
@@ -408,6 +431,22 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]]) -> st
         # Add the "NEW" button last in the same line if applicable
         if s.get("isNew"):
             buttons.append(f'<span class="new-button">NEW</span>')
+
+        # Additional buttons for cases where next24ShowtimesCount is 0
+        if next_showtimes == 0:
+            # Button based on release date (mm/dd format)
+            release_date = s.get("releaseAt", [""])[0]  # Get the first element if it's a list
+            if release_date:
+                release_month_day = dt.datetime.strptime(release_date, "%Y-%m-%d").strftime("%m/%d")
+                buttons.append(f'<span class="release-date-button">{release_month_day}</span>')
+
+            # Button for booking availability
+            if s.get("bookable"):
+                buttons.append(f'<span class="book-button">Book</span>')
+
+            # Button for coming soon (if applicable)
+            if not s.get("bookable") and s.get("isComingSoon"):
+                buttons.append(f'<span class="soon-button">Soon</span>')
 
         # Join all the buttons together (on a new line)
         buttons_html = ' '.join(buttons)
@@ -460,8 +499,9 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]]) -> st
     now = time.strftime("%Y-%m-%d %H:%M", time.localtime())
     return HTML_TMPL.format(
         date=date, css=MOBILE_CSS,
-        cards="\n    ".join(cards), now=now
+        cards="\n    ".join(cards), now=now, formatted_date=formatted_date
     )
+
 
 
 
@@ -496,6 +536,9 @@ def main():
     shows = [s for s in shows if s.get("slug") in zone_slugs]
     LOG.info("· %d after zone filtering", len(shows))
 
+    # Fetch zone data (isKids and other flags)
+    zone_data = fetch_zone_data()  # This is the missing line
+
     # cinema presence
     cinemas: Dict[str, Set[str]] = {}
     for slug, _ in FAV_CINEMAS:
@@ -514,7 +557,7 @@ def main():
             s["mcRating"] = None
 
     # build & write
-    html = build_html(shows, args.date, cinemas)
+    html = build_html(shows, args.date, cinemas, zone_data)  # Pass zone_data here
     outd = os.path.dirname(args.output)
     if outd:
         os.makedirs(outd, exist_ok=True)
