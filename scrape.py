@@ -158,37 +158,39 @@ def fetch_omdb_data(show: dict, key: str) -> dict:
         # collect RT & MC
         rt = mc = None
         for r in d.get("Ratings",[]):
-            if r.get("Source")=="Rotten Tomatoes" and r.get("Value") not in ("N/A",None):
+            if r.get("Source") == "Rotten Tomatoes" and r.get("Value") not in ("N/A", None):
                 rt = r["Value"]
-            if r.get("Source")=="Metacritic" and r.get("Value") not in ("N/A",None):
+            if r.get("Source") == "Metacritic" and r.get("Value") not in ("N/A", None):
                 mc = r["Value"].split("/")[0]
+
         return {
-            "imdbRating": d.get("imdbRating") if d.get("imdbRating") not in ("N/A",None) else None,
-            "imdbVotes":  d.get("imdbVotes")  if d.get("imdbVotes")  not in ("N/A",None) else None,
-            "imdbID":     d.get("imdbID"),
-            "omdbPoster": d.get("Poster")      if d.get("Poster")      not in ("N/A",None) else None,
-            "rtRating":   rt,
-            "mcRating":   mc,
-            "runtime":    d.get("Runtime")
+            "imdbRating": d.get("imdbRating") if d.get("imdbRating") not in ("N/A", None) else None,
+            "imdbVotes": d.get("imdbVotes") if d.get("imdbVotes") not in ("N/A", None) else None,
+            "imdbID": d.get("imdbID"),
+            "omdbPoster": d.get("Poster") if d.get("Poster") not in ("N/A", None) else None,
+            "rtRating": rt,
+            "mcRating": mc,
+            "runtime": d.get("Runtime")  # Ensure runtime is fetched
         }
     except Exception as e:
         LOG.warning("OMDb lookup failed for %s – %s", title, e)
         return {}
 
+
 def enrich_with_omdb(shows: List[dict], key: str) -> None:
     LOG.info("🔍 fetching OMDb data … (max %d threads)", MAX_OMDB_WORKERS)
     with cf.ThreadPoolExecutor(max_workers=MAX_OMDB_WORKERS) as PX:
-        futs = { PX.submit(fetch_omdb_data,s,key): s for s in shows }
+        futs = {PX.submit(fetch_omdb_data, s, key): s for s in shows}
         for fut in cf.as_completed(futs):
-            s    = futs[fut]
+            s = futs[fut]
             data = fut.result() or {}
             s["omdbRating"] = data.get("imdbRating")
-            s["omdbVotes"]  = data.get("imdbVotes")
-            s["imdbID"]     = data.get("imdbID")
+            s["omdbVotes"] = data.get("imdbVotes")
+            s["imdbID"] = data.get("imdbID")
             s["omdbPoster"] = data.get("omdbPoster")
-            s["rtRating"]   = data.get("rtRating")
-            s["mcRating"]   = data.get("mcRating")
-            s["runtime"]    = data.get("runtime")
+            s["rtRating"] = data.get("rtRating")
+            s["mcRating"] = data.get("mcRating")
+            s["runtime"] = data.get("runtime")  # Ensure the runtime field is populated here
 
 
 # ──────────────────── rating classes ───────────────────
@@ -288,9 +290,12 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 /* Button styling for different categories */
-
 .buttons-line {
   margin-top: 0.3rem;  /* Consistent with the space between ratings and cinema buttons */
+  display: flex;
+  flex-wrap: wrap;                  /* Allows buttons to wrap to the next line if needed */
+  gap: 0.3rem;                      /* Space between buttons on the same line */
+  justify-content: flex-start;      /* Align buttons to the left (you can change this if you want center alignment) */
 }
 
 .new-button {
@@ -299,8 +304,8 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   padding: 2px 5px;
   font-weight: bold;
   border-radius: 4px;
-  margin-left: 8px;
   font-size: 0.8rem;
+  white-space: nowrap; /* Prevents text from wrapping */
 }
 
 .kids-button {
@@ -310,15 +315,17 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-weight: bold;
   border-radius: 4px;
   font-size: 0.8rem;
+  white-space: nowrap; /* Prevents text from wrapping */
 }
 
 .next-showtimes-button {
-  background-color: lightgrey;
+  background-color: darkgrey;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
   border-radius: 4px;
   font-size: 0.8rem;
+  white-space: nowrap; /* Prevents text from wrapping */
 }
 
 .event-button {
@@ -328,6 +335,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-weight: bold;
   border-radius: 4px;
   font-size: 0.8rem;
+  white-space: nowrap; /* Prevents text from wrapping */
 }
 
 .runtime-button {
@@ -337,24 +345,27 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-weight: bold;
   border-radius: 4px;
   font-size: 0.8rem;
+  white-space: nowrap; /* Prevents text from wrapping */
 }
 
 .release-date-button {
-  background-color: lightgray;
+  background-color: darkgray;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
   border-radius: 4px;
   font-size: 0.8rem;
+  white-space: nowrap; /* Prevents text from wrapping */
 }
 
 .book-button {
-  background-color: darkblue;
+  background-color: lightblue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
   border-radius: 4px;
   font-size: 0.8rem;
+  white-space: nowrap; /* Prevents text from wrapping */
 }
 
 .soon-button {
@@ -364,6 +375,17 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-weight: bold;
   border-radius: 4px;
   font-size: 0.8rem;
+  white-space: nowrap; /* Prevents text from wrapping */
+}
+
+.content-rating-button {
+  background-color: #800000;  /* Deep burgundy red */
+  color: white;
+  padding: 2px 5px;
+  font-weight: bold;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;  /* Prevent text from wrapping */
 }
 
 /* Dark Mode Adjustments */
@@ -374,6 +396,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
 }
 """
+
 
 HTML_TMPL = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -407,8 +430,29 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
         # Fetch true value for isKids (this will pull from the Den Haag zone or cinema-specific data)
         is_kids = zone_data.get(s.get("slug", ""), {}).get("isKids", False)
 
+        # Get the duration from Pathé API and append ' min'
+        duration = s.get("duration", None)  # Ensure this key exists in the show data
+        runtime = f"{duration} min" if duration else ""  # Format it as 'duration min'
+
+        # Get contentRating ref and process it
+        content_rating_ref = ""
+        content_rating = s.get("contentRating", [])
+        if content_rating and isinstance(content_rating, list) and len(content_rating) > 0:
+            content_rating_ref = content_rating[0].get("ref", "")
+
+        # Process contentRating ref value
+        if content_rating_ref:
+            # Remove "-" and "ans" from the ref value
+            content_rating = content_rating_ref.replace("-", "").replace("ans", "")
+        else:
+            content_rating = ""
+
         # Create buttons for the movie based on Pathé API data
         buttons = []
+
+        # "Runtime" button from Pathé API
+        if runtime:
+            buttons.append(f'<span class="runtime-button">{runtime}</span>')
 
         # "Next Showtimes" button
         next_showtimes = s.get("next24ShowtimesCount", 0)
@@ -419,18 +463,13 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
         if is_kids:
             buttons.append(f'<span class="kids-button">Kids</span>')
 
+        # Add the "Content Rating" button if content_rating is present
+        if content_rating:
+            buttons.append(f'<span class="content-rating-button">{content_rating}</span>')
+
         # "Event" button
         if s.get("specialEvent"):
             buttons.append(f'<span class="event-button">Event</span>')
-
-        # "Runtime" button from OMDb API
-        runtime = s.get("omdbRuntime", "")
-        if runtime:
-            buttons.append(f'<span class="runtime-button">{runtime}</span>')
-
-        # Add the "NEW" button last in the same line if applicable
-        if s.get("isNew"):
-            buttons.append(f'<span class="new-button">NEW</span>')
 
         # Additional buttons for cases where next24ShowtimesCount is 0
         if next_showtimes == 0:
@@ -447,6 +486,10 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
             # Button for coming soon (if applicable)
             if not s.get("bookable") and s.get("isComingSoon"):
                 buttons.append(f'<span class="soon-button">Soon</span>')
+
+        # Add the "NEW" button last in the same line if applicable
+        if s.get("isNew"):
+            buttons.append(f'<span class="new-button">NEW</span>')
 
         # Join all the buttons together (on a new line)
         buttons_html = ' '.join(buttons)
@@ -501,8 +544,6 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
         date=date, css=MOBILE_CSS,
         cards="\n    ".join(cards), now=now, formatted_date=formatted_date
     )
-
-
 
 
 # ─────────────────────── CLI / main ───────────────────────
