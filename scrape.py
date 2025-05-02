@@ -17,6 +17,8 @@ import os
 import sys
 import time
 from typing import Dict, List, Optional, Set
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import re
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -57,6 +59,8 @@ HEADERS: Dict[str,str] = {
 OMDB_URL      = "https://www.omdbapi.com/"
 OMDB_KEY_ENV  = os.getenv("OMDB_API_KEY") or os.getenv("OMDB_KEY")
 MAX_OMDB_WORKERS = 10
+
+LEAK_CHECK_WORKERS = 10
 
 FAV_CINEMAS = [
     ("pathe-ypenburg",   "Ypenburg"),
@@ -196,6 +200,29 @@ def enrich_with_omdb(shows: List[dict], key: str) -> None:
             s["runtime"] = data.get("runtime")  # Ensure the runtime field is populated here
 
 
+# ──────────────────── Leak detection ───────────────────
+def check_leak(imdb_id: str) -> bool:
+    """
+    Returns True if apibay returns any vip‐status hits whose
+    name contains BrRip, BDRip, BluRay, WEBRip, WEB-DL, WEB or HDRip.
+    """
+    try:
+        data = get_json(
+            "https://apibay.org/q.php",
+            params={"q": imdb_id, "cat": ""},
+            timeout=5
+        )
+        for t in data:
+            if t.get("status") == "vip" and re.search(
+                r"(BrRip|BDRip|BluRay|WEBRip|WEB-DL|WEB|HDRip)",
+                t.get("name", ""), re.I
+            ):
+                return True
+    except Exception:
+        pass
+    return False
+
+
 # ──────────────────── rating classes ───────────────────
 def cls_imdb(r: Optional[str]) -> str:
     try:
@@ -332,7 +359,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .event-button {
-  background-color: darkred;
+  background-color: midnightblue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -362,7 +389,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .book-button {
-  background-color: blue;
+  background-color: darkslateblue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -372,7 +399,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .soon-button {
-  background-color: lightblue;
+  background-color: dodgerblue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -389,6 +416,16 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   border-radius: 4px;
   font-size: 0.8rem;
   white-space: nowrap;  /* Prevent text from wrapping */
+}
+
+.web-button {
+  background-color: darkred;
+  color: white;
+  padding: 2px 5px;
+  font-weight: bold;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 /* Dark Mode Adjustments */
@@ -497,9 +534,13 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
             if not bookable and s.get("isComingSoon"):
                 buttons.append(f'<span class="soon-button">Soon</span>')
 
+        # “Web” leak alert
+        if s.get("isLeaked"):
+            buttons.append('<span class="web-button">Web</span>')
+
         # Add the "NEW" button last in the same line if applicable
         if s.get("isNew"):
-            buttons.append(f'<span class="new-button">NEW</span>')
+            buttons.append(f'<span class="new-button">New</span>')
 
         # Join all the buttons together (on a new line)
         buttons_html = ' '.join(buttons)
@@ -515,7 +556,7 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
         spans = []
 
         # Add tiny logos before the ratings if available
-        if imdb:
+        if imdb: 
             spans.append(f'<div class="rating-block"><span class="imdb {cls_imdb(imdb)}">'
                          f'<img src="logos/imdb.svg" alt="IMDb"></span><span><strong>{imdb}</strong></span></div>')
         if s.get("rtRating"):
@@ -606,6 +647,21 @@ def main():
             s["omdbPoster"] = None
             s["rtRating"] = None
             s["mcRating"] = None
+
+    # Check for leaks 
+    imdb_ids = [s["imdbID"] for s in shows if s.get("imdbID")]
+    LOG.info(
+        "🔍 checking leak status for %d movies … (max %d threads)",
+        len(imdb_ids), LEAK_CHECK_WORKERS
+    )
+    leaks: Dict[str,bool] = {}
+    with ThreadPoolExecutor(max_workers=LEAK_CHECK_WORKERS) as ex:
+        futures = {ex.submit(check_leak, iid): iid for iid in imdb_ids}
+        for fut in as_completed(futures):
+            leaks[futures[fut]] = fut.result()
+    # annotate each show
+    for s in shows:
+        s["isLeaked"] = leaks.get(s.get("imdbID"), False)
 
     # build & write
     html = build_html(shows, args.date, cinemas, zone_data)  # Pass zone_data here
