@@ -130,12 +130,15 @@ def fetch_zone_shows() -> dict:
     return shows
 
 def fetch_zone_data() -> Dict[str, dict]:
-    """ Fetch only kids data from the Den Haag zone """
+    """ Fetch kids + bookable data from the Den Haag zone """
     LOG.info("🔗 Fetching zone data for Den Haag …")
     data = get_json(ZONE_URL, params={"language":"nl"})
     zone_data = {}
     for show in data.get("shows", []):
-        zone_data[show["slug"]] = {"isKids": show.get("isKids", False)}
+        zone_data[show["slug"]] = {
+            "isKids":   show.get("isKids", False),
+            "bookable": show.get("bookable", False),
+        }
     return zone_data
 
 # ──────────────────── OMDb enrichment ───────────────────
@@ -359,7 +362,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .book-button {
-  background-color: lightblue;
+  background-color: blue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -379,7 +382,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .content-rating-button {
-  background-color: #800000;  /* Deep burgundy red */
+  background-color: darkgreen;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -427,23 +430,28 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
         # title
         title = s.get("title", "")
 
-        # Fetch true value for isKids (this will pull from the Den Haag zone or cinema-specific data)
-        is_kids = zone_data.get(s.get("slug", ""), {}).get("isKids", False)
+        # Fetch true values for isKids + bookable from zone_data
+        zd        = zone_data.get(s.get("slug", ""), {})
+        is_kids   = zd.get("isKids", False)
+        bookable  = zd.get("bookable", False)
 
         # Get the duration from Pathé API and append ' min'
         duration = s.get("duration", None)  # Ensure this key exists in the show data
         runtime = f"{duration} min" if duration else ""  # Format it as 'duration min'
 
-        # Get contentRating ref and process it
+        # Get contentRating ref (handle both dict & list)
         content_rating_ref = ""
-        content_rating = s.get("contentRating", [])
-        if content_rating and isinstance(content_rating, list) and len(content_rating) > 0:
-            content_rating_ref = content_rating[0].get("ref", "")
+        cr = s.get("contentRating")
+        if isinstance(cr, dict):
+            content_rating_ref = cr.get("ref", "")
+        elif isinstance(cr, list) and cr:
+            content_rating_ref = cr[0].get("ref", "")
 
-        # Process contentRating ref value
-        if content_rating_ref:
-            # Remove "-" and "ans" from the ref value
-            content_rating = content_rating_ref.replace("-", "").replace("ans", "")
+        # Only extract the digits and show e.g. "6+"
+        import re
+        m = re.search(r"(\d+)", content_rating_ref or "")
+        if m:
+            content_rating = f"{m.group(1)}+"
         else:
             content_rating = ""
 
@@ -463,8 +471,8 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
         if is_kids:
             buttons.append(f'<span class="kids-button">Kids</span>')
 
-        # Add the "Content Rating" button if content_rating is present
-        if content_rating:
+        # Add the content-rating button only for kids movies
+        if is_kids and content_rating:
             buttons.append(f'<span class="content-rating-button">{content_rating}</span>')
 
         # "Event" button
@@ -473,18 +481,20 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
 
         # Additional buttons for cases where next24ShowtimesCount is 0
         if next_showtimes == 0:
-            # Button based on release date (mm/dd format)
-            release_date = s.get("releaseAt", [""])[0]  # Get the first element if it's a list
+            # Button based on release date (e.g. “1 Jan”)
+            release_date = s.get("releaseAt", [""])[0]
             if release_date:
-                release_month_day = dt.datetime.strptime(release_date, "%Y-%m-%d").strftime("%m/%d")
-                buttons.append(f'<span class="release-date-button">{release_month_day}</span>')
+                d = dt.datetime.strptime(release_date, "%Y-%m-%d")
+                # Day without leading zero, and month abbrev with only first letter capitalized
+                release_day_month = f"{d.day} {d.strftime('%b')}"
+                buttons.append(f'<span class="release-date-button">{release_day_month}</span>')
 
-            # Button for booking availability
-            if s.get("bookable"):
+            # Button for booking availability (only if bookable from zone_data)
+            if bookable:
                 buttons.append(f'<span class="book-button">Book</span>')
 
             # Button for coming soon (if applicable)
-            if not s.get("bookable") and s.get("isComingSoon"):
+            if not bookable and s.get("isComingSoon"):
                 buttons.append(f'<span class="soon-button">Soon</span>')
 
         # Add the "NEW" button last in the same line if applicable
