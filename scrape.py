@@ -259,7 +259,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
 .card{display:block;border:1px solid #ddd;border-radius:8px;overflow:hidden;text-decoration:none;color:inherit;background:#fff}
 .card img{width:100%;display:block}
-.card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;color:#666;font-size:.8rem}
+.card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;height: 40px;color:#666;font-size:.8rem}
 .card-body{padding:.5rem}
 .card-title{font-size:1rem;line-height:1.2;margin:0}
 .card-date{font-size:.85rem;margin:.25rem 0}
@@ -329,7 +329,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .new-button {
-  background-color: yellow;
+  background-color: darkorange;
   color: black;
   padding: 2px 5px;
   font-weight: bold;
@@ -399,7 +399,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .soon-button {
-  background-color: dodgerblue;
+  background-color: CornflowerBlue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -457,12 +457,14 @@ HTML_TMPL = """<!doctype html>
 def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_data: Dict[str, dict]) -> str:
     formatted_date = dt.datetime.strptime(date, "%Y-%m-%d").strftime("%B %-d")  # Correct format for month and day
 
+
     cards: List[str] = []
     for s in shows:
         # poster fallback
         md = (s.get("posterPath") or {}).get("md")
         src = md or s.get("omdbPoster") or ""
-        img = f'<img src="{src}" alt="{s["title"]}">' if src else '<div class="card-no-image">No image</div>'
+        href = s.get("imdbID") and f'https://www.imdb.com/title/{s["imdbID"]}' or "#"
+        img = f'<a href="{href}" target="_blank"><img src="{src}" alt="{s["title"]}" border=0></a>' if src else '<div class="card-no-image">No image</div>'
 
         # title
         title = s.get("title", "")
@@ -494,31 +496,11 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
 
         # Create buttons for the movie based on Pathé API data
         buttons = []
-
-        # "Runtime" button from Pathé API
-        if runtime:
-            buttons.append(f'<span class="runtime-button">{runtime}</span>')
-
-        # "Next Showtimes" button
+        # Compute showtimes once, up front
         next_showtimes = s.get("next24ShowtimesCount", 0)
-        if next_showtimes > 0:
-            buttons.append(f'<span class="next-showtimes-button">{next_showtimes}/24</span>')
 
-        # "Kids" button if movie is a kids movie
-        if is_kids:
-            buttons.append(f'<span class="kids-button">Kids</span>')
-
-        # Add the content-rating button only for kids movies
-        if is_kids and content_rating:
-            buttons.append(f'<span class="content-rating-button">{content_rating}</span>')
-
-        # "Event" button
-        if s.get("specialEvent"):
-            buttons.append(f'<span class="event-button">Event</span>')
-
-        # Additional buttons for cases where next24ShowtimesCount is 0
+        # Upcoming: release-date button comes first
         if next_showtimes == 0:
-            # Button based on release date – year-only for past years, “D Mon” for current/future
             release_date = s.get("releaseAt", [""])[0]
             if release_date:
                 d = dt.datetime.strptime(release_date, "%Y-%m-%d")
@@ -526,23 +508,41 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
                 if d.year < current_year:
                     label = str(d.year)
                 else:
-                    # Day without leading zero, month abbrev with first letter capitalized
                     label = f"{d.day} {d.strftime('%b')}"
                 buttons.append(f'<span class="release-date-button">{label}</span>')
 
-            # Button for booking availability (only if bookable from zone_data)
+        # Runtime button
+        if runtime:
+            buttons.append(f'<span class="runtime-button">{runtime}</span>')
+
+        # Now playing: next-showtimes + event
+        if next_showtimes > 0:
+            buttons.append(f'<span class="next-showtimes-button">{next_showtimes}/24</span>')
+            if s.get("specialEvent"):
+                buttons.append(f'<span class="event-button">Event</span>')
+
+        # Kids + content-rating
+        if is_kids:
+            buttons.append(f'<span class="kids-button">Kids</span>')
+            if content_rating:
+                buttons.append(f'<span class="content-rating-button">{content_rating}</span>')
+
+        # Upcoming: event between release-date and book/soon
+        if next_showtimes == 0 and s.get("specialEvent"):
+            buttons.append(f'<span class="event-button">Event</span>')
+
+        # Upcoming: bookable or soon
+        if next_showtimes == 0:
             if bookable:
                 buttons.append(f'<span class="book-button">Book</span>')
-
-            # Button for coming soon (if applicable)
-            if not bookable and s.get("isComingSoon"):
+            elif s.get("isComingSoon"):
                 buttons.append(f'<span class="soon-button">Soon</span>')
 
-        # “Web” leak alert
+        # Leak alert
         if s.get("isLeaked"):
             buttons.append('<span class="web-button">Web</span>')
 
-        # Add the "NEW" button last in the same line if applicable
+        # New button always last
         if s.get("isNew"):
             buttons.append(f'<span class="new-button">New</span>')
 
@@ -572,26 +572,35 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
 
         ratings_html = f'<div class="ratings-inline">{"".join(spans)}</div>'
 
-        # theaters presence
-        thr_spans = []
+        # theaters presence (with links)
         slug = s.get("slug", "")
+        thr_items = []
         for key, name in FAV_CINEMAS:
-            mark = name if slug in cinemas.get(key, set()) else ""
-            thr_spans.append(f'<span class="cinema-logo">{mark[:2].upper()}</span>' if mark else '')
-        theaters_html = f'<div class="theaters-inline">{"".join(thr_spans)}</div>'
-
-        # link
-        href = s.get("imdbID") and f'https://www.imdb.com/title/{s["imdbID"]}' or "#"
+            if slug in cinemas.get(key, set()):
+                cinema_urls = {
+                    "pathe-ypenburg":   "https://www.pathe.nl/nl/bioscopen/pathe-ypenburg",
+                    "pathe-spuimarkt":  "https://www.pathe.nl/nl/bioscopen/pathe-spuimarkt",
+                    "pathe-buitenhof":  "https://www.pathe.nl/nl/bioscopen/pathe-buitenhof",
+                }
+                url = cinema_urls[key]
+                code = name[:2].upper()
+                thr_items.append(
+                    f'<a href="{url}" target="_blank" style="text-decoration:none;">'
+                    f'<span class="cinema-logo">{code}</span>'
+                    f'</a>'
+                )
+        theaters_html = f'<div class="theaters-inline">{"".join(thr_items)}</div>'
 
         cards.append(
-            f'<a class="card" href="{href}" target="_blank">'
+            f'<div class="card">'
             f'{img}'
             f'<div class="card-body">'
-            f'{title_html}'  # Title with no "NEW" button next to it
-            f'{ratings_html}'  # Ratings
-            f'{theaters_html}'  # Cinema buttons (below the other buttons)
-            f'{buttons_line}'  # Buttons (on a new line)
-            f'</div></a>'
+            f'{title_html}'
+            f'{ratings_html}'
+            f'{theaters_html}'
+            f'{buttons_line}'
+            f'</div>'
+            f'</div>'
         )
 
     now = time.strftime("%Y-%m-%d %H:%M", time.localtime())
