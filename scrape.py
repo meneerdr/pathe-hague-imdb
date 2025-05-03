@@ -518,13 +518,17 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
 
         # Additional buttons for cases where next24ShowtimesCount is 0
         if next_showtimes == 0:
-            # Button based on release date (e.g. “1 Jan”)
+            # Button based on release date – year-only for past years, “D Mon” for current/future
             release_date = s.get("releaseAt", [""])[0]
             if release_date:
                 d = dt.datetime.strptime(release_date, "%Y-%m-%d")
-                # Day without leading zero, and month abbrev with only first letter capitalized
-                release_day_month = f"{d.day} {d.strftime('%b')}"
-                buttons.append(f'<span class="release-date-button">{release_day_month}</span>')
+                current_year = dt.date.today().year
+                if d.year < current_year:
+                    label = str(d.year)
+                else:
+                    # Day without leading zero, month abbrev with first letter capitalized
+                    label = f"{d.day} {d.strftime('%b')}"
+                buttons.append(f'<span class="release-date-button">{label}</span>')
 
             # Button for booking availability (only if bookable from zone_data)
             if bookable:
@@ -663,8 +667,20 @@ def main():
     for s in shows:
         s["isLeaked"] = leaks.get(s.get("imdbID"), False)
 
+    # ─── reorder shows ─────────────────────────────────────────
+    # now playing (next24ShowtimesCount > 0), sorted by showtime count desc
+    now_playing = [s for s in shows if s.get("next24ShowtimesCount", 0) > 0]
+    now_playing.sort(key=lambda s: s.get("next24ShowtimesCount", 0), reverse=True)
+
+    # upcoming (next24ShowtimesCount == 0), sorted by first release date ascending
+    upcoming = [s for s in shows if s.get("next24ShowtimesCount", 0) == 0]
+    upcoming.sort(key=lambda s: s.get("releaseAt", [""])[0] or "")
+
+    # stitch back together
+    shows = now_playing + upcoming
+
     # build & write
-    html = build_html(shows, args.date, cinemas, zone_data)  # Pass zone_data here
+    html = build_html(shows, args.date, cinemas, zone_data)
     outd = os.path.dirname(args.output)
     if outd:
         os.makedirs(outd, exist_ok=True)
