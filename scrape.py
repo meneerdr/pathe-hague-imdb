@@ -66,6 +66,7 @@ FAV_CINEMAS = [
     ("pathe-ypenburg",   "Ypenburg"),
     ("pathe-spuimarkt",  "Spui"),
     ("pathe-buitenhof",  "Buitenhof"),
+    ("pathe-scheveningen", "Scheveningen"),
 ]
 
 # ─────────────────────── logging ───────────────────────
@@ -124,6 +125,18 @@ def fetch_cinema_slugs(cinema_slug: str, date: str) -> Set[str]:
         return slugs
     LOG.warning("· unexpected .shows for %s: %r", cinema_slug, shows_obj)
     return set()
+
+def fetch_cinema_showtimes_data(cinema_slug: str) -> dict[str, dict]:
+    """
+    Returns full { slug: { days: { 'YYYY-MM-DD': {...}, … }, … } } 
+    for each movie in that cinema.
+    """
+    url = CINEMA_URL_TMPL.format(slug=cinema_slug)
+    LOG.info("🔗 fetching full showtimes for cinema '%s' …", cinema_slug)
+    data = get_json(url, params={"language":"nl"})
+    shows_obj = data.get("shows", {}) or {}
+    LOG.info("· got %d entries for %s", len(shows_obj), cinema_slug)
+    return shows_obj
 
 def fetch_zone_shows() -> dict:
     """ Fetch shows from the Den Haag zone to retrieve kids data and other info """
@@ -259,7 +272,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
 .card{display:block;border:1px solid #ddd;border-radius:8px;overflow:hidden;text-decoration:none;color:inherit;background:#fff}
 .card img{width:100%;display:block}
-.card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;height: 40px;color:#666;font-size:.8rem}
+.card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;color:#666;font-size:.8rem}
 .card-body{padding:.5rem}
 .card-title{font-size:1rem;line-height:1.2;margin:0}
 .card-date{font-size:.85rem;margin:.25rem 0}
@@ -300,24 +313,29 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 /* Theaters Inline */
 .theaters-inline {
-  display:grid;grid-template-columns:1fr 1fr 1fr;
-  gap:.4rem;font-size:.85rem;color:#555;text-transform:uppercase;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .4rem;
+  font-size: .85rem;
+  color: #555;
+  text-transform: uppercase;
 }
 .theaters-inline span{
   text-align:center;font-weight:600;
 }
 .theaters-inline .cinema-logo {
-  display:inline-block;
-  padding:.2rem .3rem;
-  background:#bbb;
-  color:#fff;
-  font-size:.85rem;
-  border-radius:4px;
-  min-width: 28px;  /* Ensure consistent width for the logos */
+  display: inline-block;
+  padding: .2rem .2rem;
+  background: #bbb;
+  color: #fff;
+  font-size: .85rem;
+  border-radius: 4px;
+  min-width: 20px;
   text-align: center;
   justify-content: center;
-  width: 85%;
+  width: auto;
 }
+
 
 /* Button styling for different categories */
 .buttons-line {
@@ -428,6 +446,16 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   white-space: nowrap;
 }
 
+.next-showing-button {
+  background-color: darkslateblue;
+  color: white;
+  padding: 2px 5px;
+  font-weight: bold;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 /* Dark Mode Adjustments */
 @media(prefers-color-scheme:dark){
   body { background:#000; color:#e0e0e0; }
@@ -454,7 +482,11 @@ HTML_TMPL = """<!doctype html>
 </body></html>
 """
 
-def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_data: Dict[str, dict]) -> str:
+def build_html(shows: List[dict],
+               date: str,
+               cinemas: Dict[str, Set[str]],
+               zone_data: Dict[str, dict],
+               cinema_showtimes: Dict[str, dict[str, dict]]) -> str:
     formatted_date = dt.datetime.strptime(date, "%Y-%m-%d").strftime("%B %-d")  # Correct format for month and day
 
 
@@ -466,8 +498,29 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
         href = s.get("imdbID") and f'https://www.imdb.com/title/{s["imdbID"]}' or "#"
         img = f'<a href="{href}" target="_blank"><img src="{src}" alt="{s["title"]}" border=0></a>' if src else '<div class="card-no-image">No image</div>'
 
-        # title
-        title = s.get("title", "")
+        # title—with language normalization and optional year suffix
+        raw_title = s.get("title", "")
+
+        # 1. Normalize language suffixes (case-insensitive)
+        #    Replace any "(Originele versie)" or "(OV)" → "(EN)"
+        #    and "(Nederlandse versie)" → "(NL)"
+        raw_title = re.sub(r"\((?:Originele Versie|OV)\)", "(EN)", raw_title, flags=re.IGNORECASE)
+        raw_title = re.sub(r"\((?:Nederlandse Versie)\)", "(NL)", raw_title, flags=re.IGNORECASE)
+
+        # 2. Append production year if releaseAt year is before this year,
+        #    and title doesn't already end in '(YYYY)'
+        rel_raw = s.get("releaseAt", [""])[0]
+        try:
+            rel_date = dt.datetime.strptime(rel_raw, "%Y-%m-%d").date()
+            rel_year = rel_date.year
+        except Exception:
+            rel_year = None
+
+        current_year = dt.date.today().year
+        if rel_year and rel_year < current_year and not re.search(r"\(\d{4}\)$", raw_title):
+            title = f"{raw_title} ({rel_year})"
+        else:
+            title = raw_title
 
         # Fetch true values for isKids + bookable from zone_data
         zd        = zone_data.get(s.get("slug", ""), {})
@@ -487,7 +540,6 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
             content_rating_ref = cr[0].get("ref", "")
 
         # Only extract the digits and show e.g. "6+"
-        import re
         m = re.search(r"(\d+)", content_rating_ref or "")
         if m:
             content_rating = f"{m.group(1)}+"
@@ -499,27 +551,56 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
         # Compute showtimes once, up front
         next_showtimes = s.get("next24ShowtimesCount", 0)
 
-        # Upcoming: release-date button comes first
+        # Now playing: next-showtimes + event
+        if next_showtimes > 0:
+            buttons.append(f'<span class="next-showtimes-button">{next_showtimes}/24</span>')
+
+        # Upcoming: either release-date (if not yet released) or next-showing (if already released)
         if next_showtimes == 0:
-            release_date = s.get("releaseAt", [""])[0]
-            if release_date:
-                d = dt.datetime.strptime(release_date, "%Y-%m-%d")
-                current_year = dt.date.today().year
-                if d.year < current_year:
-                    label = str(d.year)
+            rel = s.get("releaseAt", [""])[0]
+            if rel:
+                show_date = dt.datetime.strptime(rel, "%Y-%m-%d").date()
+                query_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
+                if show_date <= query_date:
+                    # already released → show next upcoming show in any cinema
+                    upcoming_dates: list[str] = []
+                    for cin_slug in cinema_showtimes:
+                        entry = cinema_showtimes[cin_slug].get(s["slug"], {})
+                        upcoming_dates += list(entry.get("days", {}).keys())
+                    if upcoming_dates:
+                        nxt = sorted(upcoming_dates)[0]
+                        dtobj = dt.datetime.strptime(nxt, "%Y-%m-%d")
+                        label = f"{dtobj.day} {dtobj.strftime('%b')}"
+                        buttons.append(f'<span class="next-showing-button">{label}</span>')
                 else:
-                    label = f"{d.day} {d.strftime('%b')}"
-                buttons.append(f'<span class="release-date-button">{label}</span>')
+                    # not yet released → show release date
+                    current_year = query_date.year
+                    if show_date.year < current_year:
+                        label = str(show_date.year)
+                    else:
+                        label = f"{show_date.day} {show_date.strftime('%b')}"
+                    buttons.append(f'<span class="release-date-button">{label}</span>')
+
+        # Upcoming: bookable only if release date is in the future, otherwise Soon
+        if next_showtimes == 0:
+            # parse “today” from the outer date string
+            today = dt.datetime.strptime(date, "%Y-%m-%d").date()
+            # grab the official releaseAt
+            release_raw = s.get("releaseAt", [""])[0]
+            if release_raw:
+                rel_date = dt.datetime.strptime(release_raw, "%Y-%m-%d").date()
+            else:
+                rel_date = today
+            # only show “Book” when bookable AND release is strictly after today
+            if bookable and rel_date > today:
+                buttons.append(f'<span class="book-button">Book</span>')
+            # otherwise, if coming soon, show Soon
+            elif s.get("isComingSoon"):
+                buttons.append(f'<span class="soon-button">Soon</span>')
 
         # Runtime button
         if runtime:
             buttons.append(f'<span class="runtime-button">{runtime}</span>')
-
-        # Now playing: next-showtimes + event
-        if next_showtimes > 0:
-            buttons.append(f'<span class="next-showtimes-button">{next_showtimes}/24</span>')
-            if s.get("specialEvent"):
-                buttons.append(f'<span class="event-button">Event</span>')
 
         # Kids + content-rating
         if is_kids:
@@ -527,16 +608,9 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
             if content_rating:
                 buttons.append(f'<span class="content-rating-button">{content_rating}</span>')
 
-        # Upcoming: event between release-date and book/soon
-        if next_showtimes == 0 and s.get("specialEvent"):
-            buttons.append(f'<span class="event-button">Event</span>')
-
-        # Upcoming: bookable or soon
-        if next_showtimes == 0:
-            if bookable:
-                buttons.append(f'<span class="book-button">Book</span>')
-            elif s.get("isComingSoon"):
-                buttons.append(f'<span class="soon-button">Soon</span>')
+        # Event
+        # if s.get("specialEvent"):
+        #     buttons.append(f'<span class="event-button">Event</span>')
 
         # Leak alert
         if s.get("isLeaked"):
@@ -572,20 +646,15 @@ def build_html(shows: List[dict], date: str, cinemas: Dict[str, Set[str]], zone_
 
         ratings_html = f'<div class="ratings-inline">{"".join(spans)}</div>'
 
-        # theaters presence (with links)
+        # theaters presence (all buttons now link to the film page)
         slug = s.get("slug", "")
+        film_url = f"https://www.pathe.nl/nl/films/{slug}"
         thr_items = []
         for key, name in FAV_CINEMAS:
             if slug in cinemas.get(key, set()):
-                cinema_urls = {
-                    "pathe-ypenburg":   "https://www.pathe.nl/nl/bioscopen/pathe-ypenburg",
-                    "pathe-spuimarkt":  "https://www.pathe.nl/nl/bioscopen/pathe-spuimarkt",
-                    "pathe-buitenhof":  "https://www.pathe.nl/nl/bioscopen/pathe-buitenhof",
-                }
-                url = cinema_urls[key]
                 code = name[:2].upper()
                 thr_items.append(
-                    f'<a href="{url}" target="_blank" style="text-decoration:none;">'
+                    f'<a href="{film_url}" target="_blank" style="text-decoration:none;">'
                     f'<span class="cinema-logo">{code}</span>'
                     f'</a>'
                 )
@@ -644,10 +713,14 @@ def main():
     # Fetch zone data (isKids and other flags)
     zone_data = fetch_zone_data()  # This is the missing line
 
-    # cinema presence
+    # cinema presence + full showtimes map
     cinemas: Dict[str, Set[str]] = {}
+    cinema_showtimes: Dict[str, dict[str, dict]] = {}
     for slug, _ in FAV_CINEMAS:
+        # grab exactly those movies playing on args.date
         cinemas[slug] = fetch_cinema_slugs(slug, args.date)
+        # still fetch the full multi-day schedule for your “next-showing” button logic
+        cinema_showtimes[slug] = fetch_cinema_showtimes_data(slug)
 
     # OMDb
     if key and not args.skip_omdb:
@@ -676,20 +749,53 @@ def main():
     for s in shows:
         s["isLeaked"] = leaks.get(s.get("imdbID"), False)
 
-    # ─── reorder shows ─────────────────────────────────────────
-    # now playing (next24ShowtimesCount > 0), sorted by showtime count desc
-    now_playing = [s for s in shows if s.get("next24ShowtimesCount", 0) > 0]
-    now_playing.sort(key=lambda s: s.get("next24ShowtimesCount", 0), reverse=True)
+    # reorder shows
+    query_date = dt.datetime.strptime(args.date, "%Y-%m-%d").date()
 
-    # upcoming (next24ShowtimesCount == 0), sorted by first release date ascending
-    upcoming = [s for s in shows if s.get("next24ShowtimesCount", 0) == 0]
-    upcoming.sort(key=lambda s: s.get("releaseAt", [""])[0] or "")
+    def sort_key(s: dict):
+        cnt = s.get("next24ShowtimesCount", 0)
+        # 0️⃣ Now playing → highest count first
+        if cnt > 0:
+            return (0, -cnt, dt.date.min)
 
-    # stitch back together
-    shows = now_playing + upcoming
+        # parse the “official” releaseAt date
+        raw = s.get("releaseAt", [""])[0]
+        try:
+            release_date = dt.datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            release_date = None
+
+        # gather any future show dates across all cinemas
+        upcoming: list[dt.date] = []
+        for showtimes in cinema_showtimes.values():
+            days = showtimes.get(s["slug"], {}).get("days", {})
+            for d in days:
+                try:
+                    d0 = dt.datetime.strptime(d, "%Y-%m-%d").date()
+                    if d0 > query_date:
+                        upcoming.append(d0)
+                except ValueError:
+                    pass
+
+        # build the list of candidates:
+        #  • all upcoming show dates
+        #  • plus release_date if it's strictly in the future
+        candidates = upcoming.copy()
+        if release_date and release_date > query_date:
+            candidates.append(release_date)
+
+        # pick the earliest candidate (or push to the end if none)
+        sort_date = min(candidates) if candidates else dt.date.max
+
+        # 1️⃣ Upcoming / future-release group, sorted by that date
+        return (1, sort_date, dt.date.min)
+
+
+    shows.sort(key=sort_key)
+
 
     # build & write
-    html = build_html(shows, args.date, cinemas, zone_data)
+    html = build_html(shows, args.date, cinemas, zone_data, cinema_showtimes)
     outd = os.path.dirname(args.output)
     if outd:
         os.makedirs(outd, exist_ok=True)
