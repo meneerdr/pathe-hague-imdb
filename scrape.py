@@ -160,21 +160,43 @@ def fetch_zone_data() -> Dict[str, dict]:
 
 # ──────────────────── OMDb enrichment ───────────────────
 def fetch_omdb_data(show: dict, key: str) -> dict:
-    # Prefer originalTitle if available
-    title = show.get("originalTitle") or show.get("title","")
+    # Prefer originalTitle if available, then strip any "(…)" suffixes
+    raw_title = show.get("originalTitle") or show.get("title","")
+    # remove anything in parentheses (e.g. "(OV)", "(Originele Versie)", "(NL)")
+    title = re.sub(r"\s*\([^)]*\)", "", raw_title).strip()
+
     # Disambiguate by year
     year = show.get("productionYear")
     if not year:
         dates = show.get("releaseAt") or []
         if dates:
             year = dates[0][:4]
-    params: Dict[str,str] = {"apikey":key,"t":title,"type":"movie","r":"json"}
+
+    params: Dict[str,str] = {
+        "apikey": key,
+        "t": title,       # now parenthesis‐free
+        "type": "movie",
+        "r": "json",
+    }
     if year:
         params["y"] = str(year)
+
     try:
-        d = get_json(OMDB_URL, params=params, timeout=10)
+        # first try with the given year (if any)
+        d = get_json(OMDB_URL, params=params.copy(), timeout=10)
         if d.get("Response") != "True":
-            return {}
+            # only retry if we had a year and OMDb explicitly says "Movie not found!"
+            error = d.get("Error", "")
+            if year and error == "Movie not found!":
+                # try again with one year earlier
+                params_retry = params.copy()
+                params_retry["y"] = str(int(year) - 1)
+                LOG.debug("Retrying OMDb lookup for %r with year=%s", title, params_retry["y"])
+                d = get_json(OMDB_URL, params=params_retry, timeout=10)
+            # if still no good, bail out
+            if d.get("Response") != "True":
+                return {}
+
         # collect RT & MC
         rt = mc = None
         for r in d.get("Ratings",[]):
@@ -492,12 +514,6 @@ def build_html(shows: List[dict],
 
     cards: List[str] = []
     for s in shows:
-        # poster fallback
-        md = (s.get("posterPath") or {}).get("md")
-        src = md or s.get("omdbPoster") or ""
-        href = s.get("imdbID") and f'https://www.imdb.com/title/{s["imdbID"]}' or "#"
-        img = f'<a href="{href}" target="_blank"><img src="{src}" alt="{s["title"]}" border=0></a>' if src else '<div class="card-no-image">No image</div>'
-
         # title—with language normalization and optional year suffix
         raw_title = s.get("title", "")
 
@@ -521,6 +537,25 @@ def build_html(shows: List[dict],
             title = f"{raw_title} ({rel_year})"
         else:
             title = raw_title
+
+        # ─── NEW POSTER + DEFAULT “no poster” IMAGE ────────────────
+        md  = (s.get("posterPath") or {}).get("md")
+        # fall back to OMDb poster, then to our noposter.jpg
+        src = md or s.get("omdbPoster") or "logos/noposter.jpg"
+
+        if s.get("imdbID"):
+            href = f'https://www.imdb.com/title/{s["imdbID"]}'
+        else:
+            q = s.get("title", "")
+            href = f'https://www.imdb.com/find/?q={q}'
+
+        # always render an <img>; if it's our noposter.jpg you'll see that instead
+        img = (
+            f'<a href="{href}" target="_blank">'
+            f'<img src="{src}" alt="{title}" border=0>'
+            f'</a>'
+        )
+
 
         # Fetch true values for isKids + bookable from zone_data
         zd        = zone_data.get(s.get("slug", ""), {})
@@ -710,8 +745,16 @@ def main():
     shows = [s for s in shows if s.get("slug") in zone_slugs]
     LOG.info("· %d after zone filtering", len(shows))
 
+    # Fetch full zone shows (with isNew, isComingSoon, specialEvent, etc.)
+    zone_shows = fetch_zone_shows()
+    for s in shows:
+        slug = s.get("slug")
+        if slug in zone_shows:
+            # brings in s["isNew"], s["isComingSoon"], s["specialEvent"], etc.
+            s.update(zone_shows[slug])
+
     # Fetch zone data (isKids and other flags)
-    zone_data = fetch_zone_data()  # This is the missing line
+    zone_data = fetch_zone_data()
 
     # cinema presence + full showtimes map
     cinemas: Dict[str, Set[str]] = {}
