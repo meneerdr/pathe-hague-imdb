@@ -369,7 +369,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 .new-button {
   background-color: darkorange;
-  color: black;
+  color: white;
   padding: 2px 5px;
   font-weight: bold;
   border-radius: 4px;
@@ -398,7 +398,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .event-button {
-  background-color: midnightblue;
+  background-color: darkslategrey;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -642,9 +642,11 @@ def build_html(shows: List[dict],
             if content_rating:
                 buttons.append(f'<span class="content-rating-button">{content_rating}</span>')
 
-        # Event
-        # if s.get("specialEvent"):
-        #     buttons.append(f'<span class="event-button">Event</span>')
+        # Show the flag if it is marked as a specialEvent (e.g. Classics, 50PLus, Docs, etc)
+        if s.get("specialEvent"):
+            flag = s.get("flag")
+            if flag:
+                buttons.append(f'<span class="event-button">{flag}</span>')
 
         # Leak alert
         if s.get("isLeaked"):
