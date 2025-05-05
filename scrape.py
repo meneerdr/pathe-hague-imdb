@@ -347,17 +347,16 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 .theaters-inline .cinema-logo {
   display: inline-block;
-  padding: .2rem .2rem;
+  padding: .2rem .1rem;
   background: #bbb;
   color: #fff;
   font-size: .85rem;
   border-radius: 4px;
-  min-width: 20px;
+  min-width: 25px;
   text-align: center;
   justify-content: center;
   width: auto;
 }
-
 
 /* Button styling for different categories */
 .buttons-line {
