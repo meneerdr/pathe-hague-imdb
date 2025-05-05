@@ -6,8 +6,9 @@ on:
   workflow_dispatch:
   schedule:
     # Every day at 04:00 UTC (≈06:00 NL) and 14:00 UTC (≈16:00 NL)
-    - cron: '0 4 * * *'
-    - cron: '0 14 * * *'
+    - cron: '0 4 * * *'      # Daily at 04:00 UTC ≈ 06:00 CET
+    - cron: '0 14 * * *'     # Daily at 14:00 UTC ≈ 16:00 CET
+    - cron: '0 8-19 * * 1'  # Mondays at 8:00–19:00 UTC → 9:00–20:00 CET
 
 permissions:
   contents: read
