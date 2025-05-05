@@ -561,9 +561,13 @@ def build_html(shows: List[dict],
         is_kids   = zd.get("isKids", False)
         bookable  = zd.get("bookable", False)
 
-        # Get the duration from Pathé API and append ' min'
-        duration = s.get("duration", None)  # Ensure this key exists in the show data
-        runtime = f"{duration} min" if duration else ""  # Format it as 'duration min'
+        # Get the duration from Pathé API and format as hours + minutes
+        duration = s.get("duration", None)
+        if duration:
+            h, m = divmod(duration, 60)
+            runtime = f"{h}h {m}m" if h else f"{m}m"
+        else:
+            runtime = ""
 
         # Get contentRating ref (handle both dict & list)
         content_rating_ref = ""
