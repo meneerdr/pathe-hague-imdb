@@ -477,6 +477,17 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   white-space: nowrap;
 }
 
+.pre-button {
+  background-color: RoyalBlue;
+  color: white;
+  padding: 2px 5px;
+  font-weight: bold;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;   /* no wrapping */
+}
+
+
 /* Dark Mode Adjustments */
 @media(prefers-color-scheme:dark){
   body { background:#000; color:#e0e0e0; }
@@ -565,7 +576,7 @@ def build_html(shows: List[dict],
         duration = s.get("duration", None)
         if duration:
             h, m = divmod(duration, 60)
-            runtime = f"{h}h {m}m" if h else f"{m}m"
+            runtime = f"{h}h{m}" if h else f"{m}m"
         else:
             runtime = ""
 
@@ -591,7 +602,7 @@ def build_html(shows: List[dict],
 
         # Now playing: next-showtimes + event
         if next_showtimes > 0:
-            buttons.append(f'<span class="next-showtimes-button">{next_showtimes}/24</span>')
+            buttons.append(f'<span class="next-showtimes-button">{next_showtimes}x</span>')
 
         # Upcoming: either release-date (if not yet released) or next-showing (if already released)
         if next_showtimes == 0:
@@ -599,8 +610,9 @@ def build_html(shows: List[dict],
             if rel:
                 show_date = dt.datetime.strptime(rel, "%Y-%m-%d").date()
                 query_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
+
                 if show_date <= query_date:
-                    # already released → show next upcoming show in any cinema
+                    # already released → add the “next showing” badge
                     upcoming_dates: list[str] = []
                     for cin_slug in cinema_showtimes:
                         entry = cinema_showtimes[cin_slug].get(s["slug"], {})
@@ -611,13 +623,33 @@ def build_html(shows: List[dict],
                         label = f"{dtobj.day} {dtobj.strftime('%b')}"
                         buttons.append(f'<span class="next-showing-button">{label}</span>')
                 else:
-                    # not yet released → show release date
-                    current_year = query_date.year
-                    if show_date.year < current_year:
-                        label = str(show_date.year)
+                    # not yet released  →  may have a pré-première (AVP)
+                    future_days: list[dt.date] = []
+                    for cin_slug in cinema_showtimes:
+                        for d in cinema_showtimes[cin_slug].get(s["slug"], {}).get("days", {}):
+                            try:
+                                d0 = dt.datetime.strptime(d, "%Y-%m-%d").date()
+                                if d0 > query_date:
+                                    future_days.append(d0)
+                            except ValueError:
+                                pass
+                    first_upcoming = min(future_days) if future_days else None
+
+                    is_avp = any(t.lower() == "avp" for t in s.get("tags", []))
+                    if first_upcoming and first_upcoming < show_date:
+                        is_avp = True
+
+                    # ① optional royal-blue “pre” button
+                    if is_avp and first_upcoming:
+                        pre_label = f"{first_upcoming.day} {first_upcoming.strftime('%b')}"
+                        buttons.append(f'<span class="pre-button">{pre_label}</span>')
+
+                    # ② always add the official release date badge
+                    if show_date.year < query_date.year:
+                        rel_label = str(show_date.year)
                     else:
-                        label = f"{show_date.day} {show_date.strftime('%b')}"
-                    buttons.append(f'<span class="release-date-button">{label}</span>')
+                        rel_label = f"{show_date.day} {show_date.strftime('%b')}"
+                    buttons.append(f'<span class="release-date-button">{rel_label}</span>')
 
         # Upcoming: bookable only if release date is in the future, otherwise Soon
         if next_showtimes == 0:
@@ -832,12 +864,16 @@ def main():
         if release_date and release_date > query_date:
             candidates.append(release_date)
 
-        # pick the earliest candidate (or push to the end if none)
-        sort_date = min(candidates) if candidates else dt.date.max
+        # fixed date sorting
+        if candidates:
+            sort_date = min(candidates)                # first show after today
+        elif release_date:                             #   ← NEW fallback
+            sort_date = release_date                   # use it even if it’s in the past
+        else:
+            sort_date = dt.date.max                    # nothing at all – push to the end
 
         # 1️⃣ Upcoming / future-release group, sorted by that date
         return (1, sort_date, dt.date.min)
-
 
     shows.sort(key=sort_key)
 
