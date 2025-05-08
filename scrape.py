@@ -447,14 +447,26 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   white-space: nowrap; /* Prevents text from wrapping */
 }
 
-.content-rating-button {
+/* Kids titles: dark-green age rating */
+.kids-rating-button {      /* isKids == true */
   background-color: darkgreen;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
   border-radius: 4px;
   font-size: 0.8rem;
-  white-space: nowrap;  /* Prevent text from wrapping */
+  white-space: nowrap;
+}
+
+/* Non-kids titles: black age rating */
+.adult-rating-button {          /* isKids == false */
+  background-color: darkgrey;
+  color: white;
+  padding: 2px 5px;
+  font-weight: bold;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .web-button {
@@ -588,13 +600,23 @@ def build_html(shows: List[dict],
         elif isinstance(cr, list) and cr:
             content_rating_ref = cr[0].get("ref", "")
 
-        # Only extract the digits and show e.g. "6+"
-        m = re.search(r"(\d+)", content_rating_ref or "")
-        if m:
-            content_rating = f"{m.group(1)}+"
+        # ─── Final age-rating normaliser ──────────────────────────
+        #  • "al"          → "AL"
+        #  • "6ans"        → "6+"
+        #  • "12ans"       → "12+"
+        #  • plain digits  → "9+"   (etc.)
+        #  • "unclassified" or empty → omit the badge
+        val = (content_rating_ref or "").strip().lower().lstrip("-")
+        if not val or val == "unclassified":
+            content_rating = "N/A"                    # skip badge entirely
+        elif val == "al":
+            content_rating = "AL"
+        elif val.endswith("ans") and val[:-3].isdigit():
+            content_rating = f"{int(val[:-3])}+"
+        elif val.isdigit():
+            content_rating = f"{val}+"
         else:
-            content_rating = ""
-
+            content_rating = val.upper()           # safe fallback
         # Create buttons for the movie based on Pathé API data
         buttons = []
         # Compute showtimes once, up front
@@ -672,11 +694,10 @@ def build_html(shows: List[dict],
         if runtime:
             buttons.append(f'<span class="runtime-button">{runtime}</span>')
 
-        # Kids + content-rating
-        if is_kids:
-            buttons.append(f'<span class="kids-button">Kids</span>')
-            if content_rating:
-                buttons.append(f'<span class="content-rating-button">{content_rating}</span>')
+        # Unified age-rating button
+        if content_rating:                     # show it for every title
+            rating_class = "kids-rating-button" if is_kids else "adult-rating-button"
+            buttons.append(f'<span class="{rating_class}">{content_rating}</span>')
 
         # Show the flag if it is marked as a specialEvent (e.g. Classics, 50PLus, Docs, etc)
         if s.get("specialEvent"):
