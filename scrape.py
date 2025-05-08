@@ -377,16 +377,6 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   white-space: nowrap; /* Prevents text from wrapping */
 }
 
-.kids-button {
-  background-color: darkgreen;
-  color: white;
-  padding: 2px 5px;
-  font-weight: bold;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  white-space: nowrap; /* Prevents text from wrapping */
-}
-
 .next-showtimes-button {
   background-color: darkgrey;
   color: white;
@@ -425,6 +415,11 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   border-radius: 4px;
   font-size: 0.8rem;
   white-space: nowrap; /* Prevents text from wrapping */
+}
+
+/* +++ new +++  – use when bookable */
+.release-date-button.bookable {
+  background-color: darkslateblue;
 }
 
 .book-button {
@@ -671,7 +666,10 @@ def build_html(shows: List[dict],
                         rel_label = str(show_date.year)
                     else:
                         rel_label = f"{show_date.day} {show_date.strftime('%b')}"
-                    buttons.append(f'<span class="release-date-button">{rel_label}</span>')
+                    rel_cls = "release-date-button"
+                    if bookable:
+                        rel_cls += " bookable"
+                    buttons.append(f'<span class="{rel_cls}">{rel_label}</span>')
 
         # Upcoming: bookable only if release date is in the future, otherwise Soon
         if next_showtimes == 0:
@@ -685,7 +683,7 @@ def build_html(shows: List[dict],
                 rel_date = today
             # only show “Book” when bookable AND release is strictly after today
             if bookable and rel_date > today:
-                buttons.append(f'<span class="book-button">Book</span>')
+                buttons.append(f'<span class="book-button">Out</span>')
             # otherwise, if coming soon, show Soon
             elif s.get("isComingSoon"):
                 buttons.append(f'<span class="soon-button">Soon</span>')
