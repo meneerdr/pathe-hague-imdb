@@ -433,7 +433,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .soon-button {
-  background-color: LightSkyBlue;
+  background-color: darkgrey;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -485,7 +485,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .pre-button {
-  background-color: RoyalBlue;
+  background-color: LightSkyBlue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
