@@ -388,7 +388,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .event-button {
-  background-color: darkslategrey;
+  background-color: darkblue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -398,7 +398,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .runtime-button {
-  background-color: darkblue;
+  background-color: SteelBlue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -419,11 +419,11 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 /* +++ new +++  – use when bookable */
 .release-date-button.bookable {
-  background-color: darkslateblue;
+  background-color: CornflowerBlue;
 }
 
 .book-button {
-  background-color: darkslateblue;
+  background-color: CornflowerBlue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -433,7 +433,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .soon-button {
-  background-color: CornflowerBlue;
+  background-color: LightSkyBlue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -475,7 +475,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .next-showing-button {
-  background-color: darkslateblue;
+  background-color: CornflowerBlue;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
