@@ -689,7 +689,7 @@ def build_html(shows: List[dict],
                 buttons.append(f'<span class="soon-button">Soon</span>')
 
         # Runtime button
-        if runtime:
+        if runtime and runtime != "1m":
             buttons.append(f'<span class="runtime-button">{runtime}</span>')
 
         # Unified age-rating button
