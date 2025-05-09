@@ -368,7 +368,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .new-button {
-  background-color: darkorange;
+  background-color: darkgrey;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
