@@ -298,9 +298,12 @@ def cls_mc(r: Optional[str]) -> str:
 
 # ──────────────────── HTML output ───────────────────────
 MOBILE_CSS = """
+html{ -webkit-text-size-adjust:100%; }
 body{
   margin:1rem;
   font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:#f6f6f7;          /* subtle grey in light mode */
+  color:#111;
 }
 h1{font-size:1.5rem;margin:0 0 1rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
@@ -334,7 +337,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
     box-shadow:0 1px 2px #0002;
   }
 }
-html{ -webkit-text-size-adjust:100%; }
+
 .card img{width:100%;display:block;object-fit:cover}
 .card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;color:#666;font-size:.8rem}
 .card-body{padding:.5rem}
@@ -553,6 +556,7 @@ HTML_TMPL = """<!doctype html>
 <head><meta charset="utf-8">
   <title>🎬 Pathé Den Haag · {formatted_date}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">   <!-- enables iOS dark-mode -->
 
   <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
