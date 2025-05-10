@@ -304,6 +304,7 @@ body{
 }
 h1{font-size:1.5rem;margin:0 0 1rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
+/* ───── Card visuals ──────────────────────────────────────────── */
 .card{
   display:block;
   border:1px solid #ddd;
@@ -313,14 +314,27 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   color:inherit;
   background:#fff;
 
-  /* new polish 👇 */
+  /* base shadow (visible everywhere) */
   box-shadow:0 1px 4px #0003;
   transition:transform .15s,box-shadow .15s;
 }
-.card:hover{
-  transform:translateY(-4px);
-  box-shadow:0 4px 12px #0004;
+
+/* ①  Desktop / trackpad — lift on hover  */
+@media (hover:hover) and (pointer:fine){
+  .card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 4px 12px #0004;
+  }
 }
+
+/* ②  Touch screens — slight sink on active press  */
+@media (hover:none) and (pointer:coarse){
+  .card:active{
+    transform:scale(.97);
+    box-shadow:0 1px 2px #0002;
+  }
+}
+
 .card img{width:100%;display:block;aspect-ratio:2/3;object-fit:cover}
 .card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;color:#666;font-size:.8rem}
 .card-body{padding:.5rem}
