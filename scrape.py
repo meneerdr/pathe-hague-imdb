@@ -404,6 +404,29 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   width: auto;
 }
 
+/* Quick-filter toolbar */
+.filter-bar{
+  display:flex;
+  gap:.5rem;
+  overflow-x:auto;
+  padding:.5rem 0 .75rem;
+}
+.chip{
+  flex:0 0 auto;
+  font-size:.8rem;
+  padding:.25rem .6rem;
+  border-radius:16px;
+  background:#ddd;
+  color:#000;
+  border:1px solid #ccc;
+  cursor:pointer;
+  user-select:none;
+}
+.chip.active{
+  background:#333;
+  color:#fff;
+}
+
 /* Button styling for different categories */
 .buttons-line {
   margin-top: 0.3rem;  /* Consistent with the space between ratings and cinema buttons */
@@ -548,6 +571,9 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   .ratings-inline, .theaters-inline { color:#ccc; }
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
 }
+
+/* utility for JS filter */
+.hidden{display:none!important;}
 """
 
 
@@ -567,13 +593,42 @@ HTML_TMPL = """<!doctype html>
 </head>
 <body>
   <h1>🎬 Pathé Den Haag · {formatted_date}</h1>
+  <!-- quick-filter chips -->
+  <div class="filter-bar">
+    <span class="chip" data-tag="imax">IMAX</span>
+    <span class="chip" data-tag="dolby">Dolby</span>
+    <span class="chip" data-tag="kids">Kids</span>
+  </div>
   <div class="grid">
     {cards}
   </div>
   <footer style="margin-top:1rem;font-size:.75rem;">
     Generated {now} · Source: Pathé API + OMDb
   </footer>
+  <!-- tiny JS for the quick-filter -->
+  <script>
+  document.addEventListener('DOMContentLoaded',function(){{          /* ← {{ */
+    const chips=[...document.querySelectorAll('.chip')];
+    chips.forEach(chip=>{{                                           /* ← {{ */
+      chip.addEventListener('click',()=>{{                           /* ← {{ */
+        chip.classList.toggle('active');
+        const active=chips.filter(c=>c.classList.contains('active')).map(c=>c.dataset.tag);
+        document.querySelectorAll('.card').forEach(card=>{{          /* ← {{ */
+          if(active.length===0){{                                    /* ← {{ */
+            card.classList.remove('hidden');
+          }}else{{                                                   /* ← }} */
+            const tags=(card.dataset.tags||'').split(' ');
+            const show=active.some(t=>tags.includes(t));
+            card.classList.toggle('hidden',!show);
+          }}                                                        /* ← }} */
+        }});
+      }});                                                           /* ← }} */
+    }});
+  }});
+  </script>
+
 </body></html>
+
 """
 
 def build_html(shows: List[dict],
@@ -824,8 +879,14 @@ def build_html(shows: List[dict],
                 )
         theaters_html = f'<div class="theaters-inline">{"".join(thr_items)}</div>'
 
+        # gather tag keywords for the quick-filter
+        tag_keys = []
+        if any(t.lower() == "imax"   for t in s.get("tags", [])): tag_keys.append("imax")
+        if any(t.lower() == "dolby"  for t in s.get("tags", [])): tag_keys.append("dolby")
+        if is_kids:                                       tag_keys.append("kids")
+
         cards.append(
-            f'<div class="card">'
+            f'<div class="card" data-tags="{" ".join(tag_keys)}">'
             f'{img}'
             f'<div class="card-body">'
             f'{title_html}'
