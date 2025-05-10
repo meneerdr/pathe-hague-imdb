@@ -334,7 +334,6 @@ h1{font-size:1.5rem;margin:0 0 1rem}
     box-shadow:0 1px 2px #0002;
   }
 }
-
 .card img{width:100%;display:block;aspect-ratio:2/3;object-fit:cover}
 .card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;color:#666;font-size:.8rem}
 .card-body{padding:.5rem}
@@ -360,10 +359,11 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   align-items: center;
 }
 
-.ratings-inline img {
-  height: 1rem;
-  margin-bottom: 0.2rem; /* Space between logo and rating */
-  vertical-align: middle;
+.ratings-inline img{
+  height:14px;        /* ≈0.9 rem on desktop – tweak if you like */
+  width:auto;
+  margin-bottom:.2rem;
+  vertical-align:middle;
 }
 .ratings-inline .imdb.good {color:#1a7f37;font-weight:bold}
 .ratings-inline .imdb.ok   {color:#d97706;font-weight:bold}
