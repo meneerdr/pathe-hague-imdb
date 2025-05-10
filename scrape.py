@@ -302,8 +302,12 @@ html{ -webkit-text-size-adjust:100%; }
 body{
   margin:1rem;
   font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  background:#f6f6f7;          /* subtle grey in light mode */
+  /* default (light) colours */
+  background:#f6f6f7;
   color:#111;
+
+  /* 🆕 let iOS/Safari know that dark-mode variants are present */
+  color-scheme: light dark;
 }
 h1{font-size:1.5rem;margin:0 0 1rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
@@ -566,7 +570,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 /* Dark Mode Adjustments */
 @media(prefers-color-scheme:dark){
-  body { background:#000; color:#e0e0e0; }
+  html,body{ background:#000; color:#e0e0e0; }
   .card { background:#111; border-color:#222; }
   .ratings-inline, .theaters-inline { color:#ccc; }
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
@@ -598,9 +602,9 @@ HTML_TMPL = """<!doctype html>
     <span class="chip" data-tag="now">Now</span>
     <span class="chip" data-tag="soon">Soon</span>
     <span class="chip" data-tag="kids">Kids</span>
-    <span class="chip" data-tag="imdb7">IMDB 7+</span>
-    <span class="chip" data-tag="imax">IMAX</span>
     <span class="chip" data-tag="dolby">Dolby</span>
+    <span class="chip" data-tag="imax">IMAX</span>
+    <span class="chip" data-tag="imdb7">IMDB 7+</span>
     <span class="chip" data-tag="web">Web</span>
   </div>
   <div class="grid">
@@ -898,19 +902,19 @@ def build_html(shows: List[dict],
         if is_kids:
             tag_keys.append("kids")
 
+        # Premium formats
+        if any(t.lower() == "dolby" for t in s.get("tags", [])):
+            tag_keys.append("dolby")
+        if any(t.lower() == "imax" for t in s.get("tags", [])):
+            tag_keys.append("imax")
+
         # IMDB 7 +
         try:
             if float(s.get("omdbRating") or 0) >= 7.0:
                 tag_keys.append("imdb7")
         except ValueError:
             pass
-
-        # Premium formats
-        if any(t.lower() == "imax" for t in s.get("tags", [])):
-            tag_keys.append("imax")
-        if any(t.lower() == "dolby" for t in s.get("tags", [])):
-            tag_keys.append("dolby")
-
+            
         # Leaked titles
         if s.get("isLeaked"):
             tag_keys.append("web")
