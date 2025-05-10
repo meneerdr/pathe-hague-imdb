@@ -334,6 +334,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
     box-shadow:0 1px 2px #0002;
   }
 }
+html{ -webkit-text-size-adjust:100%; }
 .card img{width:100%;display:block;object-fit:cover}
 .card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;color:#666;font-size:.8rem}
 .card-body{padding:.5rem}
