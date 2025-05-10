@@ -147,14 +147,23 @@ def fetch_zone_shows() -> dict:
     return shows
 
 def fetch_zone_data() -> Dict[str, dict]:
-    """ Fetch kids + bookable data from the Den Haag zone """
+    """Collect every zone-specific attribute we need in one place."""
     LOG.info("🔗 Fetching zone data for Den Haag …")
-    data = get_json(ZONE_URL, params={"language":"nl"})
-    zone_data = {}
+    data = get_json(ZONE_URL, params={"language": "nl"})
+    zone_data: Dict[str, dict] = {}
     for show in data.get("shows", []):
+        tags = show.get("tags") or []
         zone_data[show["slug"]] = {
-            "isKids":   show.get("isKids", False),
-            "bookable": show.get("bookable", False),
+            "isKids":      show.get("isKids", False),
+            "bookable":    show.get("bookable", False),
+
+            # keep the **zone** figure for the 24-hour badge
+            "zoneNext24":  show.get("next24ShowtimesCount", 0),
+
+            # premium formats available in the zone
+            "hasIMAX":     "imax"  in tags,
+            "hasDolby":    "dolby" in tags,
+            "isLast":    "lastchance" in tags,
         }
     return zone_data
 
@@ -614,8 +623,8 @@ def build_html(shows: List[dict],
             content_rating = val.upper()           # safe fallback
         # Create buttons for the movie based on Pathé API data
         buttons = []
-        # Compute showtimes once, up front
-        next_showtimes = s.get("next24ShowtimesCount", 0)
+        # Compute showtimes once, up front. Zone-based.
+        next_showtimes = zd.get("zoneNext24", 0)
 
         # Now playing: next-showtimes + event
         if next_showtimes > 0:
@@ -703,13 +712,31 @@ def build_html(shows: List[dict],
             if flag:
                 buttons.append(f'<span class="event-button">{flag}</span>')
 
+        # Premium-format buttons (zone-scoped)
+        if zd.get("hasIMAX"):
+            buttons.append(
+                '<a href="https://www.pathe.nl/nl/belevingen/imax" target="_blank" '
+                'style="text-decoration:none;"><span class="event-button">IMAX</span></a>'
+            )
+        if zd.get("hasDolby"):
+            buttons.append(
+                '<a href="https://www.pathe.nl/nl/belevingen/dolby" target="_blank" '
+                'style="text-decoration:none;"><span class="event-button">Dolby</span></a>'
+            )
+        if zd.get("isLast"):
+            buttons.append(
+                '<a href="https://www.pathe.nl/nl/belevingen/dolby" target="_blank" '
+                'style="text-decoration:none;"><span class="event-button">LAST</span></a>'
+            )
+
+
         # Leak alert
         if s.get("isLeaked"):
             buttons.append('<span class="web-button">Web</span>')
 
         # New button always last
-        if s.get("isNew"):
-            buttons.append(f'<span class="new-button">New</span>')
+        # if s.get("isNew"):
+        #    buttons.append(f'<span class="new-button">New</span>')
 
         # Join all the buttons together (on a new line)
         buttons_html = ' '.join(buttons)
@@ -852,7 +879,7 @@ def main():
     query_date = dt.datetime.strptime(args.date, "%Y-%m-%d").date()
 
     def sort_key(s: dict):
-        cnt = s.get("next24ShowtimesCount", 0)
+        cnt = zone_data.get(s["slug"], {}).get("zoneNext24", 0)
         # 0️⃣ Now playing → highest count first
         if cnt > 0:
             return (0, -cnt, dt.date.min)
