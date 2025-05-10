@@ -595,9 +595,11 @@ HTML_TMPL = """<!doctype html>
   <h1>🎬 Pathé Den Haag · {formatted_date}</h1>
   <!-- quick-filter chips -->
   <div class="filter-bar">
+    <span class="chip" data-tag="kids">Kids</span>
+    <span class="chip" data-tag="imdb7">IMDB 7+</span>
     <span class="chip" data-tag="imax">IMAX</span>
     <span class="chip" data-tag="dolby">Dolby</span>
-    <span class="chip" data-tag="kids">Kids</span>
+    <span class="chip" data-tag="web">Web</span>
   </div>
   <div class="grid">
     {cards}
@@ -881,9 +883,27 @@ def build_html(shows: List[dict],
 
         # gather tag keywords for the quick-filter
         tag_keys = []
-        if any(t.lower() == "imax"   for t in s.get("tags", [])): tag_keys.append("imax")
-        if any(t.lower() == "dolby"  for t in s.get("tags", [])): tag_keys.append("dolby")
-        if is_kids:                                       tag_keys.append("kids")
+
+        # Kids first so the order in the attribute mirrors the toolbar
+        if is_kids:
+            tag_keys.append("kids")
+
+        # IMDB 7 +
+        try:
+            if float(s.get("omdbRating") or 0) >= 7.0:
+                tag_keys.append("imdb7")
+        except ValueError:
+            pass
+
+        # Premium formats
+        if any(t.lower() == "imax" for t in s.get("tags", [])):
+            tag_keys.append("imax")
+        if any(t.lower() == "dolby" for t in s.get("tags", [])):
+            tag_keys.append("dolby")
+
+        # Leaked titles
+        if s.get("isLeaked"):
+            tag_keys.append("web")
 
         cards.append(
             f'<div class="card" data-tags="{" ".join(tag_keys)}">'
