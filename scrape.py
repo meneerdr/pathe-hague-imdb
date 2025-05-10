@@ -595,6 +595,8 @@ HTML_TMPL = """<!doctype html>
   <h1>🎬 Pathé Den Haag · {formatted_date}</h1>
   <!-- quick-filter chips -->
   <div class="filter-bar">
+    <span class="chip" data-tag="now">Now</span>
+    <span class="chip" data-tag="soon">Soon</span>
     <span class="chip" data-tag="kids">Kids</span>
     <span class="chip" data-tag="imdb7">IMDB 7+</span>
     <span class="chip" data-tag="imax">IMAX</span>
@@ -883,6 +885,14 @@ def build_html(shows: List[dict],
 
         # gather tag keywords for the quick-filter
         tag_keys = []
+
+        # “Now” = currently playing in ≥1 of the favourite cinemas
+        if thr_items:                          # at least one logo button rendered
+            tag_keys.append("now")
+
+        # “Soon” ➜ Pathé marks the title as coming soon
+        if not thr_items:
+            tag_keys.append("soon")
 
         # Kids first so the order in the attribute mirrors the toolbar
         if is_kids:
