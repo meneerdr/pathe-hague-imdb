@@ -298,11 +298,30 @@ def cls_mc(r: Optional[str]) -> str:
 
 # ──────────────────── HTML output ───────────────────────
 MOBILE_CSS = """
-body{margin:1rem;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{
+  margin:1rem;
+  font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
 h1{font-size:1.5rem;margin:0 0 1rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
-.card{display:block;border:1px solid #ddd;border-radius:8px;overflow:hidden;text-decoration:none;color:inherit;background:#fff}
-.card img{width:100%;display:block}
+.card{
+  display:block;
+  border:1px solid #ddd;
+  border-radius:8px;
+  overflow:hidden;
+  text-decoration:none;
+  color:inherit;
+  background:#fff;
+
+  /* new polish 👇 */
+  box-shadow:0 1px 4px #0003;
+  transition:transform .15s,box-shadow .15s;
+}
+.card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 4px 12px #0004;
+}
+.card img{width:100%;display:block;aspect-ratio:2/3;object-fit:cover}
 .card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;color:#666;font-size:.8rem}
 .card-body{padding:.5rem}
 .card-title{font-size:1rem;line-height:1.2;margin:0}
@@ -515,11 +534,19 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 
 HTML_TMPL = """<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en">
+<head><meta charset="utf-8">
   <title>🎬 Pathé Den Haag · {formatted_date}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
   <style>{css}</style>
-</head><body>
+</head>
+<body>
   <h1>🎬 Pathé Den Haag · {formatted_date}</h1>
   <div class="grid">
     {cards}
