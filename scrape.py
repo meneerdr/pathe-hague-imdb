@@ -63,7 +63,7 @@ MAX_OMDB_WORKERS = 10
 
 LEAK_CHECK_WORKERS = 10
 
-NEW_HOURS = 24                          # tweak to 24, 48 …
+NEW_HOURS = 48                          # tweak to 24, 48 …
 DB_PATH   = os.path.join(os.path.dirname(__file__), "movies.db")
 
 FAV_CINEMAS = [
