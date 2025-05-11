@@ -13,6 +13,7 @@ import argparse
 import concurrent.futures as cf
 import datetime as dt
 import logging
+import sqlite3
 import os
 import sys
 import time
@@ -61,6 +62,9 @@ OMDB_KEY_ENV  = os.getenv("OMDB_API_KEY") or os.getenv("OMDB_KEY")
 MAX_OMDB_WORKERS = 10
 
 LEAK_CHECK_WORKERS = 10
+
+NEW_HOURS = 24                          # tweak to 24, 48 …
+DB_PATH   = os.path.join(os.path.dirname(__file__), "movies.db")
 
 FAV_CINEMAS = [
     ("pathe-ypenburg",   "Ypenburg"),
@@ -166,6 +170,42 @@ def fetch_zone_data() -> Dict[str, dict]:
             "isLast":    "lastchance" in tags,
         }
     return zone_data
+
+# ──────────────────── recent-film DB helpers ────────────────────
+def _init_db() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS seen (slug TEXT PRIMARY KEY, first_seen TEXT)"
+    )
+    return conn
+
+_DB_CONN: Optional[sqlite3.Connection] = None
+def _db() -> sqlite3.Connection:
+    global _DB_CONN
+    if _DB_CONN is None:
+        _DB_CONN = _init_db()
+    return _DB_CONN
+
+def register_and_age(slug: str) -> tuple[float, bool]:
+    """
+    Ensure `slug` is in the DB and return:
+      (hours_ago_float, is_recent_bool)
+    where    is_recent == hours_ago < NEW_HOURS
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+    cur = _db().cursor()
+    cur.execute("SELECT first_seen FROM seen WHERE slug=?", (slug,))
+    row = cur.fetchone()
+
+    if row is None:                       # never seen → insert & mark brand-new
+        cur.execute("INSERT INTO seen VALUES(?,?)", (slug, now.isoformat()))
+        _db().commit()
+        return (0.0, True)
+
+    first_seen = dt.datetime.fromisoformat(row[0])
+    delta      = now - first_seen
+    hrs_ago    = delta.total_seconds() / 3600.0
+    return (hrs_ago, hrs_ago < NEW_HOURS)
 
 # ──────────────────── OMDb enrichment ───────────────────
 def fetch_omdb_data(show: dict, key: str) -> dict:
@@ -450,14 +490,17 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   justify-content: flex-start;      /* Align buttons to the left (you can change this if you want center alignment) */
 }
 
-.new-button {
-  background-color: darkgrey;
-  color: white;
-  padding: 2px 5px;
-  font-weight: bold;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  white-space: nowrap; /* Prevents text from wrapping */
+/* New badge – fades as time passes (see --alpha) */
+.new-button{
+  display:inline-block;
+  padding:2px 6px;
+  font-weight:bold;
+  font-size:.8rem;
+  border-radius:4px;
+  background:#ff9500;     /* vivid orange when brand-new */
+  color:#fff;
+  opacity:var(--alpha);   /* 1 → fully opaque, 0.3 → barely there */
+  transition:opacity .15s;
 }
 
 .next-showtimes-button {
@@ -612,6 +655,7 @@ HTML_TMPL = """<!doctype html>
     <span class="chip" data-tag="now">Now</span>
     <span class="chip" data-tag="book">Book</span>
     <span class="chip" data-tag="soon">Soon</span>
+    <span class="chip" data-tag="new">New</span>
     <span class="chip" data-tag="kids">Kids</span>
     <span class="chip" data-tag="dolby">Dolby</span>
     <span class="chip" data-tag="imax">IMAX</span>
@@ -659,7 +703,6 @@ document.addEventListener('DOMContentLoaded', () => {{
   }});
 }});
 </script>
-
 
 </body></html>
 
@@ -864,14 +907,22 @@ def build_html(shows: List[dict],
                 'style="text-decoration:none;"><span class="event-button">LAST</span></a>'
             )
 
-
         # Leak alert
         if s.get("isLeaked"):
             buttons.append('<span class="web-button">Web</span>')
 
-        # New button always last
-        # if s.get("isNew"):
-        #    buttons.append(f'<span class="new-button">New</span>')
+        # “recent” badge (x days) 
+        if s.get("_is_recent"):
+            hrs_ago  = s["_hours_ago"]
+            days_ago = int(hrs_ago // 24)               # 0 = today … 7 = a week ago
+            label_new    = f"{days_ago}day"
+
+            # linear fade: 1 → 0.3 across the NEW_HOURS window
+            alpha = max(0.3, 1 - 0.7 * (hrs_ago / NEW_HOURS))
+
+            buttons.append(
+                f'<span class="new-button" style="--alpha:{alpha:.2f}">{label_new}</span>'
+            )
 
         # Join all the buttons together (on a new line)
         buttons_html = ' '.join(buttons)
@@ -931,6 +982,9 @@ def build_html(shows: List[dict],
         # Kids first so the order in the attribute mirrors the toolbar
         if is_kids:
             tag_keys.append("kids")
+
+        # Recent
+        if s.get("_is_recent"):                           tag_keys.append("new")
 
         # Premium formats
         if any(t.lower() == "dolby" for t in s.get("tags", [])):
@@ -1006,6 +1060,12 @@ def main():
         if slug in zone_shows:
             # brings in s["isNew"], s["isComingSoon"], s["specialEvent"], etc.
             s.update(zone_shows[slug])
+
+    # recent-film metadata  (adds _hours_ago  &  _is_recent)
+    for s in shows:
+        hrs, recent = register_and_age(s["slug"])
+        s["_hours_ago"] = hrs
+        s["_is_recent"] = recent
 
     # Fetch zone data (isKids and other flags)
     zone_data = fetch_zone_data()
