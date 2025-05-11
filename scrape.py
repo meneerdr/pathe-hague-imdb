@@ -419,6 +419,12 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   padding:.5rem 0 .75rem;
   background:#f6f6f7;          /* light-mode background */
 }
+
+/* keep the dark-mode backdrop in sync */
+@media(prefers-color-scheme:dark){
+  .filter-bar{ background:#000; }
+}
+
 .chip{
   flex:0 0 auto;
   font-size:.8rem;
