@@ -410,10 +410,14 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 /* Quick-filter toolbar */
 .filter-bar{
+  position:sticky;   /* ← makes it “float” */
+  top:0;             /* ← stick to the very top of the viewport */
+  z-index:20;        /* ← stay above the cards */
   display:flex;
   gap:.5rem;
   overflow-x:auto;
   padding:.5rem 0 .75rem;
+  background:#f6f6f7;          /* light-mode background */
 }
 .chip{
   flex:0 0 auto;
@@ -600,6 +604,7 @@ HTML_TMPL = """<!doctype html>
   <!-- quick-filter chips -->
   <div class="filter-bar">
     <span class="chip" data-tag="now">Now</span>
+    <span class="chip" data-tag="book">Book</span>
     <span class="chip" data-tag="soon">Soon</span>
     <span class="chip" data-tag="kids">Kids</span>
     <span class="chip" data-tag="dolby">Dolby</span>
@@ -890,13 +895,17 @@ def build_html(shows: List[dict],
         # gather tag keywords for the quick-filter
         tag_keys = []
 
-        # “Now” = currently playing in ≥1 of the favourite cinemas
-        if thr_items:                          # at least one logo button rendered
+        # 1️⃣ NOW – at least one Den Haag showtime in the next 24 h
+        zone_next24 = zd.get("zoneNext24", 0)
+        if zone_next24 > 0:
             tag_keys.append("now")
-
-        # “Soon” ➜ Pathé marks the title as coming soon
-        if not thr_items:
-            tag_keys.append("soon")
+        else:
+            # 2️⃣ BOOK – not “now”, bookable == True
+            if zd.get("bookable"):
+                tag_keys.append("book")
+            # 3️⃣ SOON – not “now”, not “book”, but marked coming-soon
+            elif s.get("isComingSoon"):
+                tag_keys.append("soon")
 
         # Kids first so the order in the attribute mirrors the toolbar
         if is_kids:
@@ -914,7 +923,7 @@ def build_html(shows: List[dict],
                 tag_keys.append("imdb7")
         except ValueError:
             pass
-            
+
         # Leaked titles
         if s.get("isLeaked"):
             tag_keys.append("web")
