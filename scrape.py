@@ -625,26 +625,41 @@ HTML_TMPL = """<!doctype html>
     Generated {now} · Source: Pathé API + OMDb
   </footer>
   <!-- tiny JS for the quick-filter -->
-  <script>
-  document.addEventListener('DOMContentLoaded',function(){{          /* ← {{ */
-    const chips=[...document.querySelectorAll('.chip')];
-    chips.forEach(chip=>{{                                           /* ← {{ */
-      chip.addEventListener('click',()=>{{                           /* ← {{ */
-        chip.classList.toggle('active');
-        const active=chips.filter(c=>c.classList.contains('active')).map(c=>c.dataset.tag);
-        document.querySelectorAll('.card').forEach(card=>{{          /* ← {{ */
-          if(active.length===0){{                                    /* ← {{ */
-            card.classList.remove('hidden');
-          }}else{{                                                   /* ← }} */
-            const tags=(card.dataset.tags||'').split(' ');
-            const show=active.some(t=>tags.includes(t));
-            card.classList.toggle('hidden',!show);
-          }}                                                        /* ← }} */
-        }});
-      }});                                                           /* ← }} */
+<script>
+document.addEventListener('DOMContentLoaded', () => {{
+  const chips = [...document.querySelectorAll('.chip')];
+  const cards = [...document.querySelectorAll('.card')];
+
+  /* smooth scroll helper */
+  const toTop = () => window.scrollTo({{ top: 0, behavior: 'smooth' }});
+
+  chips.forEach(chip => {{
+    chip.addEventListener('click', () => {{
+      chip.classList.toggle('active');
+
+      /* collect active tags */
+      const active = chips
+        .filter(c => c.classList.contains('active'))
+        .map(c => c.dataset.tag);
+
+      /* hide / show cards */
+      cards.forEach(card => {{
+        if (active.length === 0) {{
+          card.classList.remove('hidden');
+        }} else {{
+          const tags = (card.dataset.tags || '').split(' ');
+          const show = active.some(t => tags.includes(t));
+          card.classList.toggle('hidden', !show);
+        }}
+      }});
+
+      /* jump to the top after every filter change */
+      toTop();
     }});
   }});
-  </script>
+}});
+</script>
+
 
 </body></html>
 
