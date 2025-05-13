@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: movies.db
-          key: movies-db-v1  # [ADDED] bump version if schema changes
+          key: movies-db-v2  # MVPv31 - bump version if schema changes - here and below
 
       - uses: actions/setup-python@v5
         with:
@@ -48,7 +48,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: movies.db
-          key: movies-db-v1
+          key: movies-db-v2 # bump version if schema changes
 
       - uses: actions/upload-pages-artifact@v3
         with:

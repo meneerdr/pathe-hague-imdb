@@ -215,14 +215,13 @@ def _init_db() -> sqlite3.Connection:
         )
     """)
 
-    # first-sighting timestamps of the Soon button
+    # first-sighting timestamps when a movie becomes bookable (“New” badge trigger)
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS seen_soon (
+        CREATE TABLE IF NOT EXISTS seen_bookable (
             slug       TEXT PRIMARY KEY,
             first_seen TEXT       -- ISO timestamp in UTC
         )
     """)
-
 
     # one OMDb snapshot per slug per calendar-day
     cur.execute("""
@@ -283,25 +282,26 @@ def register_and_age(slug: str) -> tuple[float, bool]:
     hours_ago = (now - first_seen).total_seconds() / 3600.0
     return hours_ago, hours_ago < NEW_HOURS
 
-def register_and_age_soon(slug: str, is_coming_soon: bool) -> tuple[float, bool]:
+def register_and_age_bookable(slug: str, is_bookable: bool) -> tuple[float, bool]:
     """
-    Track when a film first appears with isComingSoon==True.
-    Returns (hours_since_first_soon, is_first_24h_soon).
+    Track when a film first becomes bookable (bookable==True).
+    Returns (hours_since_first_bookable, is_first_<NEW_HOURS>_bookable).
     """
     now = dt.datetime.now(dt.timezone.utc)
     cur = _db().cursor()
 
-    # if it’s not flagged ComingSoon, we clear any “new soon” badge
-    if not is_coming_soon:
+    # only care when it turns bookable
+    if not is_bookable:
         return float('inf'), False
 
-    # check if we’ve already recorded it
-    cur.execute("SELECT first_seen FROM seen_soon WHERE slug=?", (slug,))
+    cur.execute("SELECT first_seen FROM seen_bookable WHERE slug=?", (slug,))
     row = cur.fetchone()
 
     if row is None:
-        # first-ever Soon
-        cur.execute("INSERT INTO seen_soon VALUES(?,?)", (slug, now.isoformat(timespec="seconds")))
+        cur.execute(
+            "INSERT INTO seen_bookable VALUES(?,?)",
+            (slug, now.isoformat(timespec="seconds"))
+        )
         _db().commit()
         return 0.0, True
 
@@ -1137,9 +1137,9 @@ def build_html(shows: List[dict],
         if s.get("isLeaked"):
             buttons.append('<span class="web-button">Web</span>')
 
-        # only mark “new” when it’s just become ComingSoon
-        if s.get("_is_new_soon"):
-            hours_ago = s["_hours_soon"]
+        # only mark “new” when it’s just become bookable
+        if s.get("_is_new_bookable"):
+            hours_ago = s["_hours_bookable"]
             days_ago  = int(hours_ago // 24)
             alpha     = max(0.3, 1 - 0.7 * (hours_ago / NEW_HOURS))
             buttons.append(
@@ -1207,7 +1207,7 @@ def build_html(shows: List[dict],
             tag_keys.append("kids")
 
         # Recent
-        if s.get("_is_new_soon"):                           tag_keys.append("new")
+        if s.get("_is_new_bookable"):                           tag_keys.append("new")
 
         # Premium formats
         if any(t.lower() == "dolby" for t in s.get("tags", [])):
@@ -1338,11 +1338,13 @@ def main():
         s["_hours_ago"] = hrs
         s["_is_recent"] = recent
 
-    # ─── track “first-seen Soon” for New-Soon badges ─────────────────
+    # ─── track “first-become-bookable” for New-bookable badges ────────
     for s in shows:
-        hrs_soon, is_new_soon = register_and_age_soon(s["slug"], s.get("isComingSoon", False))
-        s["_hours_soon"]   = hrs_soon
-        s["_is_new_soon"]  = is_new_soon
+        hrs_book, is_new_book = register_and_age_bookable(
+            s["slug"], s.get("bookable", False)
+        )
+        s["_hours_bookable"]    = hrs_book
+        s["_is_new_bookable"]   = is_new_book
 
     # Fetch zone data (isKids and other flags)
     zone_data = fetch_zone_data()
