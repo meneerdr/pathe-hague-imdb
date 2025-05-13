@@ -207,13 +207,22 @@ def _init_db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     cur  = conn.cursor()
 
-    # first-sighting timestamps  (for the “New” badge)
+    # first-sighting timestamps of a new movie card
     cur.execute("""
         CREATE TABLE IF NOT EXISTS seen (
             slug       TEXT PRIMARY KEY,
             first_seen TEXT                -- ISO timestamp (UTC)
         )
     """)
+
+    # first-sighting timestamps of the Soon button
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS seen_soon (
+            slug       TEXT PRIMARY KEY,
+            first_seen TEXT       -- ISO timestamp in UTC
+        )
+    """)
+
 
     # one OMDb snapshot per slug per calendar-day
     cur.execute("""
@@ -230,6 +239,8 @@ def _init_db() -> sqlite3.Connection:
             PRIMARY KEY(slug,yyyymmdd)
         )
     """)
+
+
     conn.commit()
     return conn
 
@@ -271,6 +282,36 @@ def register_and_age(slug: str) -> tuple[float, bool]:
 
     hours_ago = (now - first_seen).total_seconds() / 3600.0
     return hours_ago, hours_ago < NEW_HOURS
+
+def register_and_age_soon(slug: str, is_coming_soon: bool) -> tuple[float, bool]:
+    """
+    Track when a film first appears with isComingSoon==True.
+    Returns (hours_since_first_soon, is_first_24h_soon).
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+    cur = _db().cursor()
+
+    # if it’s not flagged ComingSoon, we clear any “new soon” badge
+    if not is_coming_soon:
+        return float('inf'), False
+
+    # check if we’ve already recorded it
+    cur.execute("SELECT first_seen FROM seen_soon WHERE slug=?", (slug,))
+    row = cur.fetchone()
+
+    if row is None:
+        # first-ever Soon
+        cur.execute("INSERT INTO seen_soon VALUES(?,?)", (slug, now.isoformat(timespec="seconds")))
+        _db().commit()
+        return 0.0, True
+
+    first = dt.datetime.fromisoformat(row[0])
+    if first.tzinfo is None:
+        first = first.replace(tzinfo=dt.timezone.utc)
+
+    hours_ago = (now - first).total_seconds() / 3600.0
+    return hours_ago, hours_ago < NEW_HOURS
+
 
 # ──────────────────── OMDb enrichment ───────────────────
 def fetch_omdb_data(show: dict, key: str) -> dict:
@@ -1096,18 +1137,14 @@ def build_html(shows: List[dict],
         if s.get("isLeaked"):
             buttons.append('<span class="web-button">Web</span>')
 
-        # “recent” badge – shows “0d”, “1d”, … and fades out
-        if s.get("_is_recent"):
-            hrs_ago  = s.get("_hours_ago", 0.0)
-            days_ago = int(hrs_ago // 24)               # 0 = today, 1 = yesterday…
-            label_new = f"{days_ago}day"                  # e.g. “3d”
-
-            # linear fade: 1 → 0.3 across the NEW_HOURS window
-            alpha = max(0.3, 1 - 0.7 * (hrs_ago / NEW_HOURS))
-
+        # only mark “new” when it’s just become ComingSoon
+        if s.get("_is_new_soon"):
+            hours_ago = s["_hours_soon"]
+            days_ago  = int(hours_ago // 24)
+            alpha     = max(0.3, 1 - 0.7 * (hours_ago / NEW_HOURS))
             buttons.append(
-                f'<span class="new-button" '
-                f'style="--alpha:{alpha:.2f}">{label_new}</span>'
+                f'<span class="new-button" style="--alpha:{alpha:.2f}">'
+                f'{days_ago}day</span>'
             )
 
         # Join all the buttons together (on a new line)
@@ -1170,7 +1207,7 @@ def build_html(shows: List[dict],
             tag_keys.append("kids")
 
         # Recent
-        if s.get("_is_recent"):                           tag_keys.append("new")
+        if s.get("_is_new_soon"):                           tag_keys.append("new")
 
         # Premium formats
         if any(t.lower() == "dolby" for t in s.get("tags", [])):
@@ -1300,6 +1337,12 @@ def main():
         hrs, recent = register_and_age(s["slug"])
         s["_hours_ago"] = hrs
         s["_is_recent"] = recent
+
+    # ─── track “first-seen Soon” for New-Soon badges ─────────────────
+    for s in shows:
+        hrs_soon, is_new_soon = register_and_age_soon(s["slug"], s.get("isComingSoon", False))
+        s["_hours_soon"]   = hrs_soon
+        s["_is_new_soon"]  = is_new_soon
 
     # Fetch zone data (isKids and other flags)
     zone_data = fetch_zone_data()

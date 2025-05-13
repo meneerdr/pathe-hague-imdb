@@ -21,6 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore movies.db cache
+        uses: actions/cache@v3
+        with:
+          path: movies.db
+          key: movies-db-v1  # [ADDED] bump version if schema changes
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -37,6 +43,12 @@ jobs:
         run: |
           mkdir -p public/logos
           cp logos/*.* public/logos/
+
+      - name: Save movies.db cache
+        uses: actions/cache@v3
+        with:
+          path: movies.db
+          key: movies-db-v1
 
       - uses: actions/upload-pages-artifact@v3
         with:
