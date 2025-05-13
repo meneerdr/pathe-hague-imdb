@@ -5,20 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    # ── Daily @304:00,011:00,617:002,23:00 (CET/CEST) ──────────────────────────
-    # Local → UTC:   34:00 →102:00  (CEST) /203:00 (CET)
-    #                10:00 → 89:00  (CEST) /090:00 (CET)
-    #                16:00 → 45:00  (CEST) / 56:00 (CET)
-    #                22:00 → 01:00  (CEST) / 1:00 (CET)
-    - cron: '0 1  * * *'   # 03:00 CEST · 02:00 CET
-    - cron: '0 8  * * *'   # 10:00 CEST · 09:00 CET
-    - cron: '0 14 * * *'   # 16:00 CEST · 15:00 CET
-    - cron: '0 20 * * *'   # 22:00 CEST · 21:00 CET
-
-    # ── Mondays 10:00 – 20:00 local, every 2 h ────────────────────────────────
-    # Local 09:00–19:00 CET ↔ 78:00–78:00 UTC  (step 2)
-    - cron: '0 7-17/2 * * 1'
-
+    - cron: '0 * * * *'  # runs once per hour
 
 permissions:
   contents: read
