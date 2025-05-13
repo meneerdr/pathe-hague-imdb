@@ -168,6 +168,7 @@ def fetch_zone_data() -> Dict[str, dict]:
             # premium formats available in the zone
             "hasIMAX":     "imax"  in tags,
             "hasDolby":    "dolby" in tags,
+            "hasAVP":      "avp"      in tags,
             "isLast":    "lastchance" in tags,
         }
     return zone_data
@@ -1063,7 +1064,7 @@ def build_html(shows: List[dict],
                                 pass
                     first_upcoming = min(future_days) if future_days else None
 
-                    is_avp = any(t.lower() == "avp" for t in s.get("tags", []))
+                    is_avp = zd.get("hasAVP", False)
                     if first_upcoming and first_upcoming < show_date:
                         is_avp = True
 
@@ -1211,9 +1212,9 @@ def build_html(shows: List[dict],
         if s.get("_is_new_bookable"):                           tag_keys.append("new")
 
         # Premium formats
-        if any(t.lower() == "dolby" for t in s.get("tags", [])):
+        if zd.get("hasDolby"):
             tag_keys.append("dolby")
-        if any(t.lower() == "imax" for t in s.get("tags", [])):
+        if zd.get("hasIMAX"):
             tag_keys.append("imax")
 
         # IMDB 7 +
