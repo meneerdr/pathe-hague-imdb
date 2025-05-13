@@ -63,7 +63,7 @@ MAX_OMDB_WORKERS = 10
 
 LEAK_CHECK_WORKERS = 10
 
-NEW_HOURS = 48                          # tweak to 24, 48 …
+NEW_HOURS = 72                          # tweak to 24, 48 … 128 to 168 (for a week)
 DB_PATH   = os.path.join(os.path.dirname(__file__), "movies.db")
 
 FAV_CINEMAS = [
@@ -171,12 +171,66 @@ def fetch_zone_data() -> Dict[str, dict]:
         }
     return zone_data
 
+# ──────────────────── zone-only enrichment helper ────────────────────
+def _merge_single_record(orig: dict) -> dict:
+    """
+    Enrich a zone-only stub with the full JSON from
+    /api/show/{slug}?language=nl  and normalise `releaseAt`
+    so the rest of the pipeline keeps working unchanged.
+    """
+    url  = f"https://www.pathe.nl/api/show/{orig['slug']}?language=nl"
+    full = get_json(url, params={})
+
+    # normalise  releaseAt  ───────────────────────────────
+    # • normal shows API  → ["YYYY-MM-DD"]
+    # • single-show API   → {"NL_NL":"YYYY-MM-DD"}
+    rel = full.get("releaseAt")
+    if isinstance(rel, dict):
+        rel = [rel.get("NL_NL", "")]
+    elif rel is None:
+        rel = [""]
+    full["releaseAt"] = rel
+
+    # copy only the fields we actually need later on
+    wanted = (
+        "releaseAt", "duration", "posterPath",
+        "originalTitle", "contentRating", "tags"
+    )
+    for k in wanted:
+        orig[k] = full.get(k, orig.get(k))
+
+    return orig
+
+
 # ──────────────────── recent-film DB helpers ────────────────────
 def _init_db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS seen (slug TEXT PRIMARY KEY, first_seen TEXT)"
-    )
+    cur  = conn.cursor()
+
+    # first-sighting timestamps  (for the “New” badge)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS seen (
+            slug       TEXT PRIMARY KEY,
+            first_seen TEXT                -- ISO timestamp (UTC)
+        )
+    """)
+
+    # one OMDb snapshot per slug per calendar-day
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS omdb_cache (
+            slug        TEXT,
+            yyyymmdd    TEXT,              -- 2025-05-13
+            omdbRating  TEXT,
+            omdbVotes   TEXT,
+            imdbID      TEXT,
+            omdbPoster  TEXT,
+            rtRating    TEXT,
+            mcRating    TEXT,
+            runtime     TEXT,
+            PRIMARY KEY(slug,yyyymmdd)
+        )
+    """)
+    conn.commit()
     return conn
 
 _DB_CONN: Optional[sqlite3.Connection] = None
@@ -190,22 +244,33 @@ def register_and_age(slug: str) -> tuple[float, bool]:
     """
     Ensure `slug` is in the DB and return:
       (hours_ago_float, is_recent_bool)
-    where    is_recent == hours_ago < NEW_HOURS
+
+    • The timestamp is always stored in explicit UTC.
+    • Legacy rows that were saved as *naive* UTC strings are upgraded
+      on-the-fly so arithmetic never fails.
     """
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.timezone.utc)                      # aware
+
     cur = _db().cursor()
     cur.execute("SELECT first_seen FROM seen WHERE slug=?", (slug,))
     row = cur.fetchone()
 
-    if row is None:                       # never seen → insert & mark brand-new
-        cur.execute("INSERT INTO seen VALUES(?,?)", (slug, now.isoformat()))
+    if row is None:                                             # brand-new movie
+        cur.execute(
+            "INSERT INTO seen VALUES(?,?)",
+            (slug, now.isoformat(timespec="seconds"))
+        )
         _db().commit()
-        return (0.0, True)
+        return 0.0, True                                        # 0 h ago → recent
 
     first_seen = dt.datetime.fromisoformat(row[0])
-    delta      = now - first_seen
-    hrs_ago    = delta.total_seconds() / 3600.0
-    return (hrs_ago, hrs_ago < NEW_HOURS)
+
+    # upgrade old, naive UTC strings (from earlier runs)
+    if first_seen.tzinfo is None:
+        first_seen = first_seen.replace(tzinfo=dt.timezone.utc)
+
+    hours_ago = (now - first_seen).total_seconds() / 3600.0
+    return hours_ago, hours_ago < NEW_HOURS
 
 # ──────────────────── OMDb enrichment ───────────────────
 def fetch_omdb_data(show: dict, key: str) -> dict:
@@ -214,12 +279,28 @@ def fetch_omdb_data(show: dict, key: str) -> dict:
     # remove anything in parentheses (e.g. "(OV)", "(Originele Versie)", "(NL)")
     title = re.sub(r"\s*\([^)]*\)", "", raw_title).strip()
 
-    # Disambiguate by year
-    year = show.get("productionYear")
+    # ─── Disambiguate by year (robust against all API shapes) ─────
+    year = show.get("productionYear")              # ① explicit field
+
     if not year:
-        dates = show.get("releaseAt") or []
-        if dates:
-            year = dates[0][:4]
+        rel = show.get("releaseAt")                # may be list | str | dict | None
+
+        if isinstance(rel, list) and rel:          # ② list → first element
+            year = rel[0][:4]
+
+        elif isinstance(rel, str) and rel:         # ③ plain string "YYYY-MM-DD"
+            year = rel[:4]
+
+        elif isinstance(rel, dict):                # ④ dict e.g. { "start": ... }
+            for fld in ("start", "releaseAt", "date"):   # ‼️  avoid shadowing the function arg
+                val = rel.get(fld)
+                if val:
+                    year = str(val)[:4]
+                    break
+
+    if year:
+        year = str(year)             # normalise for use in params
+
 
     params: Dict[str,str] = {
         "apikey": key,
@@ -268,20 +349,77 @@ def fetch_omdb_data(show: dict, key: str) -> dict:
         return {}
 
 
-def enrich_with_omdb(shows: List[dict], key: str) -> None:
-    LOG.info("🔍 fetching OMDb data … (max %d threads)", MAX_OMDB_WORKERS)
-    with cf.ThreadPoolExecutor(max_workers=MAX_OMDB_WORKERS) as PX:
-        futs = {PX.submit(fetch_omdb_data, s, key): s for s in shows}
+def enrich_with_omdb(shows: List[dict], api_key: Optional[str]) -> None:
+    """
+    • Always restores today's data from omdb_cache.
+    • Calls the OMDb API only for (slug,today) rows missing in the cache *and*
+      only when an API key is supplied.
+    • Fresh answers are written back into the same cache table.
+    """
+    today = dt.date.today().isoformat()
+    cur   = _db().cursor()
+
+    # ── 1. hydrate from cache ───────────────────────────────────────────
+    missing: list[dict] = []
+    for s in shows:
+        slug = s["slug"]
+        row  = cur.execute(
+            "SELECT omdbRating,omdbVotes,imdbID,omdbPoster,"
+            "       rtRating,mcRating,runtime "
+            "FROM omdb_cache WHERE slug=? AND yyyymmdd=?",
+            (slug, today)
+        ).fetchone()
+
+        if row:
+            keys = ["omdbRating","omdbVotes","imdbID",
+                    "omdbPoster","rtRating","mcRating","runtime"]
+            s.update(dict(zip(keys, row)))
+        else:
+            missing.append(s)
+
+    # nothing missing → done
+    if not missing:
+        LOG.info("🔍 OMDb cache hit for all %d titles – no API calls", len(shows))
+        return
+
+    # no API key → can't query, but still ensure all keys exist
+    if not api_key:
+        LOG.info("🔍 OMDb key absent – skipped %d live look-ups", len(missing))
+        for s in missing:
+            for k in ("omdbRating","omdbVotes","imdbID",
+                      "omdbPoster","rtRating","mcRating","runtime"):
+                s.setdefault(k, None)
+        return
+
+    # ── 2. live look-ups for the *missing* slugs ───────────────────────
+    LOG.info("🔍 OMDb cache miss for %d titles – querying API …", len(missing))
+    with cf.ThreadPoolExecutor(max_workers=MAX_OMDB_WORKERS) as px:
+        futs = {px.submit(fetch_omdb_data, s, api_key): s for s in missing}
         for fut in cf.as_completed(futs):
-            s = futs[fut]
+            s    = futs[fut]
             data = fut.result() or {}
-            s["omdbRating"] = data.get("imdbRating")
-            s["omdbVotes"] = data.get("imdbVotes")
-            s["imdbID"] = data.get("imdbID")
-            s["omdbPoster"] = data.get("omdbPoster")
-            s["rtRating"] = data.get("rtRating")
-            s["mcRating"] = data.get("mcRating")
-            s["runtime"] = data.get("runtime")  # Ensure the runtime field is populated here
+
+            # copy into the card
+            for k in ("imdbRating","imdbVotes","imdbID",
+                      "omdbPoster","rtRating","mcRating","runtime"):
+                target = "omdbRating" if k == "imdbRating" else \
+                         "omdbVotes"  if k == "imdbVotes"  else k
+                s[target] = data.get(k)
+
+            # persist in cache  (use INSERT OR REPLACE for idempotency)
+            cur.execute("""
+                INSERT OR REPLACE INTO omdb_cache
+                (slug,yyyymmdd,omdbRating,omdbVotes,imdbID,
+                 omdbPoster,rtRating,mcRating,runtime)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            """, (
+                s["slug"], today,
+                s.get("omdbRating"), s.get("omdbVotes"), s.get("imdbID"),
+                s.get("omdbPoster"), s.get("rtRating"), s.get("mcRating"),
+                s.get("runtime")
+            ))
+    _db().commit()
+
 
 
 # ──────────────────── Leak detection ───────────────────
@@ -660,6 +798,7 @@ HTML_TMPL = """<!doctype html>
     <span class="chip" data-tag="dolby">Dolby</span>
     <span class="chip" data-tag="imax">IMAX</span>
     <span class="chip" data-tag="imdb7">IMDB 7+</span>
+    <span class="chip" data-tag="future">Future</span>
     <span class="chip" data-tag="web">Web</span>
   </div>
   <div class="grid">
@@ -668,52 +807,76 @@ HTML_TMPL = """<!doctype html>
   <footer style="margin-top:1rem;font-size:.75rem;">
     Generated {now} · Source: Pathé API + OMDb
   </footer>
-  <!-- tiny JS for the quick-filter -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {{
-  const chips = [...document.querySelectorAll('.chip')];
-  const cards = [...document.querySelectorAll('.card')];
 
-  /* smooth scroll helper */
-  const toTop = () => window.scrollTo({{ top: 0, behavior: 'smooth' }});
+  <!-- tiny JS for the quick-filter (all braces are doubled for str.format) -->
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {{
+    const chips  = [...document.querySelectorAll('.chip')];
+    const cards  = [...document.querySelectorAll('.card')];
 
-  chips.forEach(chip => {{
-    chip.addEventListener('click', () => {{
-      chip.classList.toggle('active');
+    /* helper – true when a card should be visible for the current selection */
+    const visible = (card, active) => {{
+      if (active.length === 0) {{                /* no filter → hide “future” */
+        return !card.dataset.tags.split(' ').includes('future');
+      }}
+      const tags = card.dataset.tags.split(' ');
+      return active.some(t => tags.includes(t));
+    }};
 
-      /* collect active tags */
+    const applyFilter = () => {{
       const active = chips
         .filter(c => c.classList.contains('active'))
         .map(c => c.dataset.tag);
 
-      /* hide / show cards */
       cards.forEach(card => {{
-        if (active.length === 0) {{
-          card.classList.remove('hidden');
-        }} else {{
-          const tags = (card.dataset.tags || '').split(' ');
-          const show = active.some(t => tags.includes(t));
-          card.classList.toggle('hidden', !show);
-        }}
+        card.classList.toggle('hidden', !visible(card, active));
       }});
+    }};
 
-      /* jump to the top after every filter change */
-      toTop();
+    chips.forEach(chip => {{
+      chip.addEventListener('click', () => {{
+        chip.classList.toggle('active');
+        applyFilter();
+        window.scrollTo({{ top: 0, behavior: 'smooth' }});
+      }});
     }});
+
+    /* first run – hide future cards by default */
+    applyFilter();
   }});
-}});
-</script>
+  </script>
+
+
+
+
+
+
 
 </body></html>
 
 """
+
+def _rel_str(show: dict) -> str:
+    """Return the first *YYYY-MM-DD* we can find in show['releaseAt']."""
+    rel = show.get("releaseAt")
+    if isinstance(rel, str):               # already a plain string
+        return rel
+    if isinstance(rel, list):              # old format  ['2025-05-13', …]
+        return rel[0] if rel else ""
+    if isinstance(rel, dict):              # new format  {'NL_NL': '2025-07-30', …}
+        return rel.get("NL_NL") or next(iter(rel.values()), "")
+    return ""
+
 
 def build_html(shows: List[dict],
                date: str,
                cinemas: Dict[str, Set[str]],
                zone_data: Dict[str, dict],
                cinema_showtimes: Dict[str, dict[str, dict]]) -> str:
-    formatted_date = dt.datetime.strptime(date, "%Y-%m-%d").strftime("%B %-d")  # Correct format for month and day
+    # ─── helper-wide reference date (avoid “maybe-defined” bugs) ───
+    query_date     = dt.datetime.strptime(date, "%Y-%m-%d").date()
+    formatted_date = query_date.strftime("%B %-d")
+
 
 
     cards: List[str] = []
@@ -727,13 +890,32 @@ def build_html(shows: List[dict],
         raw_title = re.sub(r"\((?:Originele Versie|OV)\)", "(EN)", raw_title, flags=re.IGNORECASE)
         raw_title = re.sub(r"\((?:Nederlandse Versie)\)", "(NL)", raw_title, flags=re.IGNORECASE)
 
-        # 2. Append production year if releaseAt year is before this year,
-        #    and title doesn't already end in '(YYYY)'
-        rel_raw = s.get("releaseAt", [""])[0]
+        # 2. Robust release-date parsing – works for list / str / dict / None
+        rel_field = s.get("releaseAt")
+
+        if isinstance(rel_field, list) and rel_field:          # ["2025-11-14", …]
+            rel_raw = rel_field[0]
+
+        elif isinstance(rel_field, str):                       # "2025-11-14"
+            rel_raw = rel_field
+
+        elif isinstance(rel_field, dict):      # {"NL_NL": "..."}  or {"start": "..."}
+            rel_raw = (
+                rel_field.get("NL_NL")      # ← first look for NL locale
+                or rel_field.get("start")
+                or rel_field.get("releaseAt")
+                or rel_field.get("date")
+                or ""
+            )
+
+        else:                                                  # None / empty
+            rel_raw = ""
+
         try:
-            rel_date = dt.datetime.strptime(rel_raw, "%Y-%m-%d").date()
+            rel_date = dt.datetime.strptime(rel_raw[:10], "%Y-%m-%d").date()
             rel_year = rel_date.year
-        except Exception:
+        except ValueError:
+            rel_date = None
             rel_year = None
 
         current_year = dt.date.today().year
@@ -810,10 +992,10 @@ def build_html(shows: List[dict],
 
         # Upcoming: either release-date (if not yet released) or next-showing (if already released)
         if next_showtimes == 0:
-            rel = s.get("releaseAt", [""])[0]
+            rel = rel_raw
             if rel:
                 show_date = dt.datetime.strptime(rel, "%Y-%m-%d").date()
-                query_date = dt.datetime.strptime(date, "%Y-%m-%d").date()
+                # (query_date is now computed once at the top)
 
                 if show_date <= query_date:
                     # already released → add the “next showing” badge
@@ -851,8 +1033,11 @@ def build_html(shows: List[dict],
                     # ② always add the official release date badge
                     if show_date.year < query_date.year:
                         rel_label = str(show_date.year)
+                    elif show_date.year > query_date.year:
+                        rel_label = f"{show_date.day} {show_date.strftime('%b')} {str(show_date.year)[2:]}"
                     else:
                         rel_label = f"{show_date.day} {show_date.strftime('%b')}"
+
                     rel_cls = "release-date-button"
                     if bookable:
                         rel_cls += " bookable"
@@ -861,9 +1046,9 @@ def build_html(shows: List[dict],
         # Upcoming: bookable only if release date is in the future, otherwise Soon
         if next_showtimes == 0:
             # parse “today” from the outer date string
-            today = dt.datetime.strptime(date, "%Y-%m-%d").date()
+            today = query_date        # same object created at the top
             # grab the official releaseAt
-            release_raw = s.get("releaseAt", [""])[0]
+            release_raw = rel_raw
             if release_raw:
                 rel_date = dt.datetime.strptime(release_raw, "%Y-%m-%d").date()
             else:
@@ -911,17 +1096,18 @@ def build_html(shows: List[dict],
         if s.get("isLeaked"):
             buttons.append('<span class="web-button">Web</span>')
 
-        # “recent” badge (x days) 
+        # “recent” badge – shows “0d”, “1d”, … and fades out
         if s.get("_is_recent"):
-            hrs_ago  = s["_hours_ago"]
-            days_ago = int(hrs_ago // 24)               # 0 = today … 7 = a week ago
-            label_new    = f"{days_ago}day"
+            hrs_ago  = s.get("_hours_ago", 0.0)
+            days_ago = int(hrs_ago // 24)               # 0 = today, 1 = yesterday…
+            label_new = f"{days_ago}day"                  # e.g. “3d”
 
             # linear fade: 1 → 0.3 across the NEW_HOURS window
             alpha = max(0.3, 1 - 0.7 * (hrs_ago / NEW_HOURS))
 
             buttons.append(
-                f'<span class="new-button" style="--alpha:{alpha:.2f}">{label_new}</span>'
+                f'<span class="new-button" '
+                f'style="--alpha:{alpha:.2f}">{label_new}</span>'
             )
 
         # Join all the buttons together (on a new line)
@@ -1003,8 +1189,18 @@ def build_html(shows: List[dict],
         if s.get("isLeaked"):
             tag_keys.append("web")
 
+        # 4️⃣ FUTURE – release date far in the future (≥ today + 60 days)
+        rel_date_str = _rel_str(s)
+        try:
+            rel_dt = dt.datetime.strptime(rel_date_str, "%Y-%m-%d").date()
+            if rel_dt - query_date >= dt.timedelta(days=60):
+                tag_keys.append("future")
+        except ValueError:
+            pass
+
         cards.append(
-            f'<div class="card" data-tags="{" ".join(tag_keys)}">'
+            f'<div class="card{" hidden" if "future" in tag_keys else ""}" '
+            f'data-tags="{" ".join(tag_keys)}">'
             f'{img}'
             f'<div class="card-body">'
             f'{title_html}'
@@ -1016,9 +1212,16 @@ def build_html(shows: List[dict],
         )
 
     now = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+
+    # escape any stray “{ }” that may appear inside movie titles etc.
+    cards_html = "\n    ".join(cards)
+
     return HTML_TMPL.format(
-        date=date, css=MOBILE_CSS,
-        cards="\n    ".join(cards), now=now, formatted_date=formatted_date
+        date=date,
+        css=MOBILE_CSS,
+        cards=cards_html,
+        now=now,
+        formatted_date=formatted_date,
     )
 
 
@@ -1053,13 +1256,44 @@ def main():
     shows = [s for s in shows if s.get("slug") in zone_slugs]
     LOG.info("· %d after zone filtering", len(shows))
 
-    # Fetch full zone shows (with isNew, isComingSoon, specialEvent, etc.)
+    # ───── Merge zone metadata ───────────────────────────────────────
     zone_shows = fetch_zone_shows()
-    for s in shows:
+    for s in shows:                       # enrich the “global” entries first
         slug = s.get("slug")
         if slug in zone_shows:
-            # brings in s["isNew"], s["isComingSoon"], s["specialEvent"], etc.
             s.update(zone_shows[slug])
+
+    # ───── Single-show enrichment & stub pickup (cache-bust) ────────
+    def enrich_or_fetch(slug: str, existing: Optional[dict]) -> Optional[dict]:
+        """
+        • If *existing* is provided → mutate it in-place via _merge_single_record.
+        • If *existing* is None       → try to fetch a full record for slug.
+        Returns the (possibly new) record or None.
+        """
+        try:
+            if existing is not None:
+                return _merge_single_record(existing)           # in-place merge
+            else:                                               # zone-only stub
+                url  = f"https://www.pathe.nl/api/show/{slug}"
+                data = get_json(url, params={"language": "nl"})
+                return _merge_single_record(data) if (data.get("title") or "").strip() else None
+        except Exception as exc:
+            LOG.debug("single-show fetch/merge failed for %s – %s", slug, exc)
+            return None
+
+    # Map slug → current dict (or None if we don't have it yet)
+    slug_to_obj = {s["slug"]: s for s in shows}
+    for zslug in zone_shows:
+        slug_to_obj.setdefault(zslug, None)                    # inject stubs
+
+    LOG.info("🔗 cache-busting %d titles via single-show endpoint …", len(slug_to_obj))
+    with cf.ThreadPoolExecutor(max_workers=10) as px:
+        futs = {px.submit(enrich_or_fetch, slug, obj): slug for slug, obj in slug_to_obj.items()}
+        shows = []                                             # rebuild list
+        for fut in cf.as_completed(futs):
+            rec = fut.result()
+            if rec:
+                shows.append(rec)
 
     # recent-film metadata  (adds _hours_ago  &  _is_recent)
     for s in shows:
@@ -1079,17 +1313,8 @@ def main():
         # still fetch the full multi-day schedule for your “next-showing” button logic
         cinema_showtimes[slug] = fetch_cinema_showtimes_data(slug)
 
-    # OMDb
-    if key and not args.skip_omdb:
-        enrich_with_omdb(shows, key)
-    else:
-        for s in shows:
-            s["omdbRating"] = None
-            s["omdbVotes"] = ""
-            s["imdbID"] = None
-            s["omdbPoster"] = None
-            s["rtRating"] = None
-            s["mcRating"] = None
+    # OMDb  (daily cache; API key optional)
+    enrich_with_omdb(shows, None if args.skip_omdb else key)
 
     # Check for leaks 
     imdb_ids = [s["imdbID"] for s in shows if s.get("imdbID")]
@@ -1115,10 +1340,23 @@ def main():
         if cnt > 0:
             return (0, -cnt, dt.date.min)
 
-        # parse the “official” releaseAt date
-        raw = s.get("releaseAt", [""])[0]
+        # ─── Robust “official” releaseAt parsing ───────────────────
+        rel_field = _rel_str(s)         # may be list | str | dict | None
+
+        if isinstance(rel_field, list) and rel_field:
+            raw = rel_field[0]
+
+        elif isinstance(rel_field, str):
+            raw = rel_field
+
+        elif isinstance(rel_field, dict):
+            raw = rel_field.get("start") or rel_field.get("releaseAt") or rel_field.get("date") or ""
+
+        else:
+            raw = ""
+
         try:
-            release_date = dt.datetime.strptime(raw, "%Y-%m-%d").date()
+            release_date = dt.datetime.strptime(raw[:10], "%Y-%m-%d").date()
         except ValueError:
             release_date = None
 
