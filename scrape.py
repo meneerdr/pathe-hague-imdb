@@ -17,6 +17,7 @@ import sqlite3
 import os
 import sys
 import time
+from zoneinfo import ZoneInfo
 from typing import Dict, List, Optional, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
@@ -1248,7 +1249,7 @@ def build_html(shows: List[dict],
             f'</div>'
         )
 
-    now = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+    now = dt.datetime.now(ZoneInfo("Europe/Amsterdam")).strftime("%Y-%m-%d %H:%M %Z")
 
     # escape any stray “{ }” that may appear inside movie titles etc.
     cards_html = "\n    ".join(cards)
