@@ -835,8 +835,8 @@ HTML_TMPL = """<!doctype html>
   <div class="filter-bar">
     <span class="chip" data-tag="now">Now</span>
     <span class="chip" data-tag="book">Book</span>
-    <span class="chip" data-tag="soon">Soon</span>
     <span class="chip" data-tag="new">New</span>
+    <span class="chip" data-tag="soon">Soon</span>
     <span class="chip" data-tag="kids">Kids</span>
     <span class="chip" data-tag="dolby">Dolby</span>
     <span class="chip" data-tag="imax">IMAX</span>
