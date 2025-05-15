@@ -64,7 +64,7 @@ MAX_OMDB_WORKERS = 10
 
 LEAK_CHECK_WORKERS = 10
 
-NEW_HOURS = 72                          # tweak to 24, 48 … 128 to 168 (for a week)
+NEW_HOURS = 168                          # tweak to 24, 48 … 120 to 168 (for a week)
 DB_PATH   = os.path.join(os.path.dirname(__file__), "movies.db")
 
 FAV_CINEMAS = [
@@ -1228,14 +1228,9 @@ def build_html(shows: List[dict],
         if s.get("isLeaked"):
             tag_keys.append("web")
 
-        # 4️⃣ FUTURE – release date far in the future (≥ today + 60 days)
-        rel_date_str = _rel_str(s)
-        try:
-            rel_dt = dt.datetime.strptime(rel_date_str, "%Y-%m-%d").date()
-            if rel_dt - query_date >= dt.timedelta(days=60):
-                tag_keys.append("future")
-        except ValueError:
-            pass
+        # 4️⃣ FUTURE – no showtimes, not bookable, not coming soon
+        if zone_next24 == 0 and not bookable and not s.get("isComingSoon"):
+            tag_keys.append("future")
 
         cards.append(
             f'<div class="card{" hidden" if "future" in tag_keys else ""}" '
