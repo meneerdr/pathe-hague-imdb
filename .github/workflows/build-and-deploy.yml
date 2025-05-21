@@ -50,6 +50,13 @@ jobs:
           path: movies.db
           key: movies-db-v2 # bump version if schema changes
 
+      - name: Upload movies.db for debugging
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: movies-db
+          path: movies.db
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
