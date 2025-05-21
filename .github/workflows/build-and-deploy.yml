@@ -28,6 +28,7 @@ jobs:
           key: movies-db-v2-${{ github.run_id }}
           restore-keys: |
             movies-db-v2-
+            movies-db-v2
 
       - uses: actions/setup-python@v5
         with:
