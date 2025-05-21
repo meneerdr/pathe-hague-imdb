@@ -886,7 +886,7 @@ HTML_TMPL = """<!doctype html>
     <span class="chip" data-tag="new">New</span>
     <span class="chip" data-tag="soon">Soon</span>
     <span class="chip" data-tag="kids">Kids</span>
-    <span class="chip" data-tag="dolby"><img src="logos/dolby.svg" alt="Dolby" style="height:1em;vertical-align:middle"></span>
+    <span class="chip" data-tag="dolby">Dolby</span>
     <span class="chip" data-tag="imdb7">IMDB 7+</span>
     <span class="chip" data-tag="future">Future</span>
     <span class="chip" data-tag="web">Web</span>
