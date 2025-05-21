@@ -47,12 +47,6 @@ jobs:
           mkdir -p public/logos
           cp logos/*.* public/logos/
 
-      - name: Save movies.db cache
-        uses: actions/cache@v3
-        with:
-          path: movies.db
-          key: movies-db-v2-${{ github.run_id }}
-
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
