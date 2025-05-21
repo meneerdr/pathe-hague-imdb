@@ -52,12 +52,12 @@ jobs:
 
       - name: Upload movies.db for debugging
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: movies-db
           path: movies.db
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v2
         with:
           path: public
 
