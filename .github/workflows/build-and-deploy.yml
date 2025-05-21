@@ -25,7 +25,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: movies.db
-          key: movies-db-v2  # MVPv31 - bump version if schema changes - here and below
+          key: movies-db-v2-${{ github.run_id }}
+          restore-keys: |
+            movies-db-v2-
 
       - uses: actions/setup-python@v5
         with:
@@ -48,7 +50,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: movies.db
-          key: movies-db-v2 # bump version if schema changes
+          key: movies-db-v2-${{ github.run_id }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
