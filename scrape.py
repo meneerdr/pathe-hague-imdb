@@ -64,7 +64,9 @@ MAX_OMDB_WORKERS = 10
 
 LEAK_CHECK_WORKERS = 10
 
-NEW_HOURS = 168                          # tweak to 24, 48 … 120 to 168 (for a week)
+NEW_BOOKABLE_HOURS = 168    # “0day/…day” badge fades over 7 days
+NEW_SOON_HOURS     =  24    # “New” badge stays for 3 days
+
 DB_PATH   = os.path.join(os.path.dirname(__file__), "movies.db")
 
 FAV_CINEMAS = [
@@ -217,11 +219,19 @@ def _init_db() -> sqlite3.Connection:
         )
     """)
 
-    # first-sighting timestamps when a movie becomes bookable (“New” badge trigger)
+    # first-sighting of “bookable == True” for n-day button
     cur.execute("""
         CREATE TABLE IF NOT EXISTS seen_bookable (
             slug       TEXT PRIMARY KEY,
             first_seen TEXT       -- ISO timestamp in UTC
+        )
+    """)
+
+    # first-sighting of “isComingSoon == True” for New button
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS seen_soon (
+            slug       TEXT PRIMARY KEY,
+            first_seen TEXT                -- ISO timestamp (UTC)
         )
     """)
 
@@ -282,7 +292,7 @@ def register_and_age(slug: str) -> tuple[float, bool]:
         first_seen = first_seen.replace(tzinfo=dt.timezone.utc)
 
     hours_ago = (now - first_seen).total_seconds() / 3600.0
-    return hours_ago, hours_ago < NEW_HOURS
+    return hours_ago, hours_ago < NEW_SOON_HOURS
 
 def register_and_age_bookable(slug: str, is_bookable: bool) -> tuple[float, bool]:
     """
@@ -312,7 +322,34 @@ def register_and_age_bookable(slug: str, is_bookable: bool) -> tuple[float, bool
         first = first.replace(tzinfo=dt.timezone.utc)
 
     hours_ago = (now - first).total_seconds() / 3600.0
-    return hours_ago, hours_ago < NEW_HOURS
+    return hours_ago, hours_ago < NEW_BOOKABLE_HOURS
+
+def register_and_age_soon(slug: str, is_coming_soon: bool) -> tuple[float, bool]:
+    """
+    Track when a film is first seen with isComingSoon == True.
+    Returns (hours_since_first_soon, is_within_NEW_HOURS_window).
+    """
+    if not is_coming_soon:                       # nothing to record / show
+        return float('inf'), False
+
+    now = dt.datetime.now(dt.timezone.utc)
+    cur = _db().cursor()
+
+    cur.execute("SELECT first_seen FROM seen_soon WHERE slug=?", (slug,))
+    row = cur.fetchone()
+
+    if row is None:                              # brand-new “Soon”
+        cur.execute("INSERT INTO seen_soon VALUES(?,?)",
+                    (slug, now.isoformat(timespec='seconds')))
+        _db().commit()
+        return 0.0, True
+
+    first = dt.datetime.fromisoformat(row[0])
+    if first.tzinfo is None:
+        first = first.replace(tzinfo=dt.timezone.utc)
+
+    hrs = (now - first).total_seconds() / 3600.0
+    return hrs, hrs < NEW_SOON_HOURS
 
 
 # ──────────────────── OMDb enrichment ───────────────────
@@ -671,8 +708,8 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   justify-content: flex-start;      /* Align buttons to the left (you can change this if you want center alignment) */
 }
 
-/* New badge – fades as time passes (see --alpha) */
-.new-button{
+/* New-Bookable badge – fades as time passes (see --alpha) */
+.new-bookable-button{
   display:inline-block;
   padding:2px 6px;
   font-weight:bold;
@@ -682,6 +719,17 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   color:#fff;
   opacity:var(--alpha);   /* 1 → fully opaque, 0.3 → barely there */
   transition:opacity .15s;
+}
+
+/* New-Soon badge – fixed OrangeRed, no fading */
+.new-soon-button{
+  display:inline-block;
+  padding:2px 6px;
+  font-weight:bold;
+  font-size:.8rem;
+  border-radius:4px;
+  background:#FF4500;     /* OrangeRed */
+  color:#fff;
 }
 
 .next-showtimes-button {
@@ -838,8 +886,7 @@ HTML_TMPL = """<!doctype html>
     <span class="chip" data-tag="new">New</span>
     <span class="chip" data-tag="soon">Soon</span>
     <span class="chip" data-tag="kids">Kids</span>
-    <span class="chip" data-tag="dolby">Dolby</span>
-    <span class="chip" data-tag="imax">IMAX</span>
+    <span class="chip" data-tag="dolby"><img src="logos/dolby.svg" alt="Dolby" style="height:1em;vertical-align:middle"></span>
     <span class="chip" data-tag="imdb7">IMDB 7+</span>
     <span class="chip" data-tag="future">Future</span>
     <span class="chip" data-tag="web">Web</span>
@@ -1139,15 +1186,19 @@ def build_html(shows: List[dict],
         if s.get("isLeaked"):
             buttons.append('<span class="web-button">Web</span>')
 
-        # only mark “new” when it’s just become bookable
+        # New-Bookable badge (orange, fading)
         if s.get("_is_new_bookable"):
             hours_ago = s["_hours_bookable"]
             days_ago  = int(hours_ago // 24)
-            alpha     = max(0.3, 1 - 0.7 * (hours_ago / NEW_HOURS))
+            alpha     = max(0.3, 1 - 0.7 * (hours_ago / NEW_BOOKABLE_HOURS))
             buttons.append(
-                f'<span class="new-button" style="--alpha:{alpha:.2f}">'
+                f'<span class="new-bookable-button" style="--alpha:{alpha:.2f}">'
                 f'{days_ago}day</span>'
             )
+
+        # New-Soon badge (purple, constant)
+        if s.get("_is_new_soon"):
+            buttons.append('<span class="new-soon-button">New</span>')
 
         # Join all the buttons together (on a new line)
         buttons_html = ' '.join(buttons)
@@ -1208,8 +1259,9 @@ def build_html(shows: List[dict],
         if is_kids:
             tag_keys.append("kids")
 
-        # Recent
-        if s.get("_is_new_bookable"):                           tag_keys.append("new")
+        # Recent (bookable OR soon)
+        if s.get("_is_new_bookable") or s.get("_is_new_soon"):
+            tag_keys.append("new")
 
         # Premium formats
         if zd.get("hasDolby"):
@@ -1335,16 +1387,23 @@ def main():
         s["_hours_ago"] = hrs
         s["_is_recent"] = recent
 
-    # ─── track “first-become-bookable” for New-bookable badges ────────
-    for s in shows:
-        hrs_book, is_new_book = register_and_age_bookable(
-            s["slug"], s.get("bookable", False)
-        )
-        s["_hours_bookable"]    = hrs_book
-        s["_is_new_bookable"]   = is_new_book
-
     # Fetch zone data (isKids and other flags)
     zone_data = fetch_zone_data()
+    
+    # ─── track “new” states (bookable & soon) ─────────────────────────
+    for s in shows:
+        slug = s["slug"]
+        zd   = zone_data.get(slug, {})
+
+        # a) bookable-based “0day/n-day” badge
+        hrs_b, is_new_b = register_and_age_bookable(slug, zd.get("bookable", False))
+        s["_hours_bookable"]  = hrs_b
+        s["_is_new_bookable"] = is_new_b
+
+        # b) coming-soon “New” badge
+        hrs_s, is_new_s = register_and_age_soon(slug, s.get("isComingSoon", False))
+        s["_hours_soon"]     = hrs_s
+        s["_is_new_soon"]    = is_new_s
 
     # cinema presence + full showtimes map
     cinemas: Dict[str, Set[str]] = {}

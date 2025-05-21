@@ -21,11 +21,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ─── cache movies.db ──────────────────────────────────────────
       - name: Restore movies.db cache
         uses: actions/cache@v3
         with:
           path: movies.db
+          # unique key → always a MISS → post-job hook WILL upload the updated DB
           key: movies-db-v2-${{ github.run_id }}
+          # prefix → fetches the newest previous archive
           restore-keys: |
             movies-db-v2-
             movies-db-v2
