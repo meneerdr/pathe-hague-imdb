@@ -50,16 +50,14 @@ jobs:
           path: movies.db
           key: movies-db-v2 # bump version if schema changes
 
-      - name: Upload movies.db for debugging
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: movies-db
-          path: movies.db
-
-      - uses: actions/upload-pages-artifact@v2
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: public
+
+      - name: Dump seen_bookable table
+        run: |
+          echo "→ seen_bookable rows:"
+          sqlite3 movies.db "SELECT slug, first_seen FROM seen_bookable ORDER BY first_seen;"
 
   deploy:
     needs: build
