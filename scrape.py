@@ -753,7 +753,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .runtime-button {
-  background-color: SteelBlue;
+  background-color: lightslategrey; /* was SteelBlue */
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -820,7 +820,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .web-button {
-  background-color: darkred;
+  background-color: black;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
