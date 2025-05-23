@@ -64,7 +64,7 @@ MAX_OMDB_WORKERS = 10
 
 LEAK_CHECK_WORKERS = 10
 
-NEW_BOOKABLE_HOURS = 168    # “0day/…day” badge fades over 7 days
+NEW_BOOKABLE_HOURS = 24    # “0day/…day” badge fades over 7 days
 NEW_SOON_HOURS     =  24    # “New” badge stays for 3 days
 
 DB_PATH   = os.path.join(os.path.dirname(__file__), "movies.db")
