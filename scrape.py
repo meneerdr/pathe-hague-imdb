@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures as cf
-import sqlite3, datetime, pathlib
+import datetime as dt
+import pathlib
 import logging
+import sqlite3
 import os
 import sys
 import time
@@ -259,7 +261,7 @@ def _init_db() -> sqlite3.Connection:
 
     cur.execute(
         "INSERT OR REPLACE INTO metadata (key, value) VALUES ('last_updated', ?)",
-        [datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"]
+        [dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds") + "Z"]
     )
 
     conn.commit()
