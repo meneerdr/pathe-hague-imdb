@@ -251,6 +251,17 @@ def _init_db() -> sqlite3.Connection:
         )
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS metadata (
+            key   TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """)
+
+    cur.execute(
+        "INSERT OR REPLACE INTO metadata (key, value) VALUES ('last_updated', ?)",
+        [datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"]
+    )
 
     conn.commit()
     return conn
