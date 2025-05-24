@@ -240,7 +240,7 @@ def _init_db() -> sqlite3.Connection:
     cur.execute("""
         CREATE TABLE IF NOT EXISTS omdb_cache (
             slug        TEXT,
-            yyyymmdd    TEXT,              -- 2025-05-13
+            yyyymmdd    TEXT,              -- e.g. 2025-05-13
             omdbRating  TEXT,
             omdbVotes   TEXT,
             imdbID      TEXT,
