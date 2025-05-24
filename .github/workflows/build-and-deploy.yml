@@ -21,17 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache movies.db
+      - name: Restore movies.db
         uses: actions/cache@v3
         with:
           path: movies.db
-
-          # ① unique key for *this* run
-          key: movies-db-v3-${{ github.run_id }}
-
-          # ② fallback so the restore phase still finds the most-recent DB -
-          restore-keys: |
-            movies-db-v3-
+          key: movies-db-v4-${{ github.run_id }}
+          restore-keys: movies-db-v4-
 
       - uses: actions/setup-python@v5
         with:
