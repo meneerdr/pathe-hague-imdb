@@ -21,11 +21,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Restore movies.db cache
+      - name: Cache movies.db
         uses: actions/cache@v3
         with:
           path: movies.db
-          key: movies-db-v3          # bump the suffix only when the DB schema changes
+
+          # unique key whenever the DB content changes
+          key: movies-db-v3-${{ hashFiles('movies.db') }}
+
+          # fall-back prefix so the restore phase can still
+          # fetch the last successful cache if the hash changed
+          restore-keys: |
+            movies-db-v3-
 
       - uses: actions/setup-python@v5
         with:
