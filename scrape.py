@@ -1158,7 +1158,7 @@ def build_html(shows: List[dict],
                 rel_date = today
             # only show “Book” when bookable AND release is strictly after today
             if bookable and rel_date > today:
-                buttons.append(f'<span class="book-button">Out</span>')
+                buttons.append(f'<span class="book-button">Pre</span>')
             # otherwise, if coming soon, show Soon
             elif s.get("isComingSoon"):
                 buttons.append(f'<span class="soon-button">Soon</span>')
