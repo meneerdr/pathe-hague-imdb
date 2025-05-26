@@ -991,6 +991,7 @@ def build_html(shows: List[dict],
         #    and "(Nederlandse versie)" → "(NL)"
         raw_title = re.sub(r"\((?:Originele Versie|OV)\)", "(EN)", raw_title, flags=re.IGNORECASE)
         raw_title = re.sub(r"\((?:Nederlandse Versie)\)", "(NL)", raw_title, flags=re.IGNORECASE)
+        raw_title = re.sub(r"\((?:Nederlands gesproken)\)", "(NL)", raw_title, flags=re.IGNORECASE)
 
         # 2. Robust release-date parsing – works for list / str / dict / None
         rel_field = s.get("releaseAt")
