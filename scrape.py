@@ -77,6 +77,9 @@ FAV_CINEMAS = [
     ("pathe-scheveningen", "Scheveningen"),
 ]
 
+# Remove any (...) when a movie has no imdbID for the fallback link
+PAREN_RE = re.compile(r"\s*\([^)]*\)")
+
 # ─────────────────────── logging ───────────────────────
 LOG = logging.getLogger("pathe")
 LOG.setLevel(logging.INFO)
@@ -1035,8 +1038,11 @@ def build_html(shows: List[dict],
         if s.get("imdbID"):
             href = f'https://www.imdb.com/title/{s["imdbID"]}'
         else:
-            q = s.get("title", "")
-            href = f'https://www.imdb.com/find/?q={q}'
+            # strip any “( … )” additions for a cleaner search query
+            q = PAREN_RE.sub("", s.get("title", "")).strip()
+            # optional but nice: URL-encode the query
+            from urllib.parse import quote_plus
+            href = f'https://www.imdb.com/find/?q={quote_plus(q)}'
 
         # always render an <img>; if it's our noposter.jpg you'll see that instead
         img = (
