@@ -1016,14 +1016,33 @@ document.addEventListener('DOMContentLoaded', () => {{
     }});
   }});
 
-  /* ─────────────────── long-press detection (500 ms) ─────────────────── */
-  const LONG = 500;
-  cards.forEach(card => {{
-    let t;
-    card.addEventListener('pointerdown',  () => {{ t = setTimeout(() => toggleWatch(card), LONG); }});
-    card.addEventListener('pointerup',    () => clearTimeout(t));
-    card.addEventListener('pointerleave', () => clearTimeout(t));
-  }});
+  /* ─────────────────── long-press detection (robust) ─────────────────── */
+  const LONG = 500;                     /* ms – press length for “watched”  */
+
+  cards.forEach(card => {{              /* <-- doubled braces! */
+    let timer, startX, startY;
+
+    /* cancel helper ---------------------------------------------------- */
+    const cancel = () => clearTimeout(timer);
+
+    /* start the timer on first contact --------------------------------- */
+    card.addEventListener('pointerdown', e => {{
+      startX = e.clientX;
+      startY = e.clientY;
+      timer  = setTimeout(() => toggleWatch(card), LONG);
+    }});
+
+    /* abort on any of these ------------------------------------------- */
+    card.addEventListener('pointerup',     cancel);
+    card.addEventListener('pointerleave',  cancel);
+    card.addEventListener('pointercancel', cancel);         /* ← NEW */
+
+    /* abort if the finger moves >10 px (scroll or drift) -------------- */
+    card.addEventListener('pointermove', e => {{
+      if (Math.abs(e.clientX - startX) > 10 ||
+          Math.abs(e.clientY - startY) > 10) cancel();
+    }});
+  }});                                   /* <-- doubled braces! */
 
   /* ─────────────────── initial render + storage persistence ─────────────────── */
   apply();
