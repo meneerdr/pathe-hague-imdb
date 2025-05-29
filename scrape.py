@@ -681,40 +681,16 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   width: auto;
 }
 
-/* ───── Thumb-zone filter sheet ────────────────────────── */
-/* Bottom-sheet that slides up for the chips */
-.filter-sheet{
-  position:fixed;
-  left:0; right:0; bottom:0;
-  transform:translateY(100%);      /* closed by default */
-  transition:transform .25s;
-  background:#f6f6f7;
-  border-top:1px solid #ccc;
-  padding:.6rem .8rem 1rem;
-  z-index:50;
-
-  /* keep the page from scrolling while you drag the sheet */
-  overscroll-behavior:contain;
-}
-
-.filter-sheet.open{ transform:translateY(0); }
-
-.sheet-handle{
-  width:38px;height:4px;border-radius:2px;
-  background:#999;margin:.4rem auto .4rem;
-}
-
-/* dark-mode tint */
-@media(prefers-color-scheme:dark){
-  .sheet-handle{ background:#666; }
-}
-
 /* Quick-filter toolbar */
-
 .filter-bar{
-  display:flex;gap:.5rem;overflow-x:auto;
-  padding:.5rem .8rem 1rem;        /* extra bottom padding for thumb */
-  background:transparent;          /* lives inside sheet now */
+  position:sticky;   /* ← makes it “float” */
+  top:0;             /* ← stick to the very top of the viewport */
+  z-index:20;        /* ← stay above the cards */
+  display:flex;
+  gap:.5rem;
+  overflow-x:auto;
+  padding:.5rem 0 .75rem;
+  background:#f6f6f7;          /* light-mode background */
 }
 
 /* keep the dark-mode backdrop in sync */
@@ -897,24 +873,6 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
 }
 
-/* ───── Bottom-sheet only on small screens (<600 px) ───── */
-@media (min-width:600px){
-  .filter-sheet{
-    position: static;        /* drop the “sheet” behaviour             */
-    transform: none;         /* no slide-out                           */
-    display: block;          /* override the existing ‘display:none’   */
-    border: 0;               /* tidy up                                */
-    padding: 0;              /* no extra spacing                       */
-  }
-  .sheet-handle{ display:none; }  /* the grey drag bar isn’t needed */
-}
-
-
-/* ───── Fine-tune handle hit-area for touch devices ───── */
-@media(hover:none) and (pointer:coarse){
-  .sheet-handle{ height:28px; }         /* larger thumb area */
-}
-
 /* utility for JS filter */
 .hidden{display:none!important;}
 
@@ -952,20 +910,17 @@ HTML_TMPL = """<!doctype html>
 <body>
   <h1>🎬 Pathé Den Haag · {formatted_date}</h1>
   <!-- quick-filter chips -->
-    <div class="filter-sheet">   
-    <div class="sheet-handle"></div>
-        <div class="filter-bar">
-        <span class="chip" data-tag="now">Now</span>
-        <span class="chip" data-tag="book">Book</span>
-        <span class="chip" data-tag="new">New</span>
-        <span class="chip" data-tag="soon">Soon</span>
-        <span class="chip" data-tag="kids">Kids</span>
-        <span class="chip" data-tag="dolby">Dolby</span>
-        <span class="chip" data-tag="imdb7">IMDB 7+</span>
-        <span class="chip" data-tag="future">Future</span>
-        <span class="chip" data-tag="web">Web</span>
-        <span class="chip" data-tag="watched">Hidden</span>
-      </div>
+  <div class="filter-bar">
+    <span class="chip" data-tag="now">Now</span>
+    <span class="chip" data-tag="book">Book</span>
+    <span class="chip" data-tag="new">New</span>
+    <span class="chip" data-tag="soon">Soon</span>
+    <span class="chip" data-tag="kids">Kids</span>
+    <span class="chip" data-tag="dolby">Dolby</span>
+    <span class="chip" data-tag="imdb7">IMDB 7+</span>
+    <span class="chip" data-tag="future">Future</span>
+    <span class="chip" data-tag="web">Web</span>
+    <span class="chip" data-tag="watched">Hidden</span>
   </div>
   <div class="grid">
     {cards}
@@ -981,8 +936,6 @@ document.addEventListener('DOMContentLoaded', () => {{
   const chips    = [...document.querySelectorAll('.chip')];
   const cards    = [...document.querySelectorAll('.card')];
   const snackbar = document.getElementById('snackbar');
-  const sheet   = document.querySelector('.filter-sheet');
-  const handle  = document.querySelector('.sheet-handle');
 
   /* ─────────────────── watched <Set> in localStorage ─────────────────── */
   const KEY = 'watchedSlugs-v1';
@@ -1063,48 +1016,14 @@ document.addEventListener('DOMContentLoaded', () => {{
     }});
   }});
 
-  /* ─────────────────── long-press detection (1000 ms) ─────────────────── */
-  const LONG = 1000;
+  /* ─────────────────── long-press detection (500 ms) ─────────────────── */
+  const LONG = 500;
   cards.forEach(card => {{
     let t;
     card.addEventListener('pointerdown',  () => {{ t = setTimeout(() => toggleWatch(card), LONG); }});
     card.addEventListener('pointerup',    () => clearTimeout(t));
     card.addEventListener('pointerleave', () => clearTimeout(t));
   }});
-
-  /* ─────────────────── bottom-sheet drag / tap ─────────────────── */
-let startY   = 0;
-let startTop = 0;
-const HEIGHT = sheet.getBoundingClientRect().height - 38;   /* visible amount when closed */
-
-function setSheet(y){{ sheet.style.transform = `translateY(${{y}}px)`; }}
-function snap(open){{ 
-  sheet.classList.toggle('open', open);
-  sheet.style.transform = '';                 /* let CSS rule take over */
-  /* lift snackbar above when sheet is open */
-  snackbar.style.bottom = open ? 'calc(1.2rem + ' + HEIGHT + 'px)' : '1.2rem';
-}}
-
-handle.addEventListener('pointerdown', e => {{ 
-  startY   = e.clientY;
-  startTop = sheet.classList.contains('open') ? 0 : HEIGHT;
-  handle.setPointerCapture(e.pointerId);
-}});
-
-handle.addEventListener('pointermove', e => {{ 
-  const delta = e.clientY - startY;
-  const y     = Math.min(Math.max(startTop + delta, 0), HEIGHT);
-  setSheet(y);
-}});
-
-handle.addEventListener('pointerup', e => {{ 
-  const delta = e.clientY - startY;
-  const open  = (startTop === 0) ? delta < 40 : delta < HEIGHT/2;
-  snap(open);
-}});
-
-handle.addEventListener('click', () => snap(!sheet.classList.contains('open')));
-
 
   /* ─────────────────── initial render + storage persistence ─────────────────── */
   apply();
