@@ -1016,8 +1016,8 @@ document.addEventListener('DOMContentLoaded', () => {{
     }});
   }});
 
-  /* ─────────────────── long-press detection (500 ms) ─────────────────── */
-  const LONG = 500;
+  /* ─────────────────── long-press detection (1000 ms) ─────────────────── */
+  const LONG = 1000;
   cards.forEach(card => {{
     let t;
     card.addEventListener('pointerdown',  () => {{ t = setTimeout(() => toggleWatch(card), LONG); }});
