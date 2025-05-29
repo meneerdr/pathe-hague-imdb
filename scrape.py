@@ -875,6 +875,21 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 /* utility for JS filter */
 .hidden{display:none!important;}
+
+
+/* dim watched cards when the “Watched” chip is active */
+.card.dim { opacity: .35; }
+
+/* snackbar that slides up from the bottom */
+#snackbar{
+  position:fixed;left:50%;bottom:-60px;transform:translateX(-50%);
+  background:#333;color:#fff;padding:.6rem 1rem;border-radius:6px;
+  font-size:.9rem;display:flex;gap:.8rem;align-items:center;
+  transition:bottom .25s;
+}
+#snackbar.visible{ bottom:1.2rem; }
+#snackbar button{background:none;border:none;color:#4ea3ff;font-weight:600}
+
 """
 
 
@@ -905,6 +920,7 @@ HTML_TMPL = """<!doctype html>
     <span class="chip" data-tag="imdb7">IMDB 7+</span>
     <span class="chip" data-tag="future">Future</span>
     <span class="chip" data-tag="web">Web</span>
+    <span class="chip" data-tag="watched">Hidden</span>
   </div>
   <div class="grid">
     {cards}
@@ -914,46 +930,114 @@ HTML_TMPL = """<!doctype html>
   </footer>
 
   <!-- tiny JS for the quick-filter (all braces are doubled for str.format) -->
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {{
-    const chips  = [...document.querySelectorAll('.chip')];
-    const cards  = [...document.querySelectorAll('.card')];
+<script>
+document.addEventListener('DOMContentLoaded', () => {{
+  /* ─────────────────── DOM references ─────────────────── */
+  const chips    = [...document.querySelectorAll('.chip')];
+  const cards    = [...document.querySelectorAll('.card')];
+  const snackbar = document.getElementById('snackbar');
 
-    /* helper – true when a card should be visible for the current selection */
-    const visible = (card, active) => {{
-      if (active.length === 0) {{                /* no filter → hide “future” */
-        return !card.dataset.tags.split(' ').includes('future');
-      }}
-      const tags = card.dataset.tags.split(' ');
-      return active.some(t => tags.includes(t));
-    }};
+  /* ─────────────────── watched <Set> in localStorage ─────────────────── */
+  const KEY = 'watchedSlugs-v1';
 
-    const applyFilter = () => {{
-      const active = chips
-        .filter(c => c.classList.contains('active'))
-        .map(c => c.dataset.tag);
+  const loadSet = () => new Set(JSON.parse(localStorage.getItem(KEY) || '[]'));
+  const saveSet = set => localStorage.setItem(KEY, JSON.stringify([...set]));
 
-      cards.forEach(card => {{
-        card.classList.toggle('hidden', !visible(card, active));
-      }});
-    }};
+  const watched = loadSet();
 
-    chips.forEach(chip => {{
-      chip.addEventListener('click', () => {{
-        chip.classList.toggle('active');
-        applyFilter();
-        window.scrollTo({{ top: 0, behavior: 'smooth' }});
-      }});
+  /* ─────────────────── apply() → filter + watched visuals ─────────────────── */
+  function apply() {{
+    const active        = chips.filter(c => c.classList.contains('active'))
+                               .map(c => c.dataset.tag);
+    const watchedChipOn = active.includes('watched');
+
+    cards.forEach(card => {{
+      const slug       = card.dataset.slug;
+      const tags       = card.dataset.tags.split(' ');
+      if (!slug) return;      /* card lacks slug → never treat it as watched */
+      const isWatched  = watched.has(slug);
+
+      /* baseline visibility (quick-filter) */
+      let show = active.length === 0
+                 ? !tags.includes('future')
+                 : active.some(t => tags.includes(t));
+
+      /* hide watched unless “Watched” chip is ON */
+      if (isWatched && !watchedChipOn) show = false;
+
+      /* If the Watched chip is ON and this card is watched, always show it */
+      if (watchedChipOn && isWatched) show = true;
+
+      card.classList.toggle('hidden', !show);
+      card.classList.toggle('dim',    isWatched && watchedChipOn);
     }});
+  }}
 
-    /* first run – hide future cards by default */
-    applyFilter();
+  /* ─────────────────── toggleWatch(card) ─────────────────── */
+  function toggleWatch(card) {{
+    const slug        = card.dataset.slug;
+    const wasWatched  = watched.has(slug);
+
+    if (wasWatched) watched.delete(slug);
+    else            watched.add(slug);
+
+    saveSet(watched);
+    if (navigator.vibrate) navigator.vibrate(10);   /* tiny haptic ping */
+    apply();
+    showUndo(slug, wasWatched);
+  }}
+
+  /* ─────────────────── snackbar with Undo ─────────────────── */
+  function showUndo(slug, wasWatched) {{
+    const msg = wasWatched ? 'Restored' : 'Marked as watched';
+    snackbar.innerHTML = `${{msg}} <button id="undo">Undo</button>`;
+    snackbar.classList.add('visible');
+
+    document.getElementById('undo').onclick = () => {{
+      if (wasWatched) watched.add(slug);
+      else            watched.delete(slug);
+      saveSet(watched);
+      apply();
+      snackbar.classList.remove('visible');
+    }};
+
+    clearTimeout(snackbar._timer);
+    snackbar._timer = setTimeout(() => {{
+      snackbar.classList.remove('visible');
+    }}, 5000);
+  }}
+
+  /* ─────────────────── chip click behaviour ─────────────────── */
+  chips.forEach(chip => {{
+    chip.addEventListener('click', () => {{
+      chip.classList.toggle('active');
+      apply();
+      window.scrollTo({{ top: 0, behavior: 'smooth' }});
+    }});
   }});
-  </script>
+
+  /* ─────────────────── long-press detection (500 ms) ─────────────────── */
+  const LONG = 500;
+  cards.forEach(card => {{
+    let t;
+    card.addEventListener('pointerdown',  () => {{ t = setTimeout(() => toggleWatch(card), LONG); }});
+    card.addEventListener('pointerup',    () => clearTimeout(t));
+    card.addEventListener('pointerleave', () => clearTimeout(t));
+  }});
+
+  /* ─────────────────── initial render + storage persistence ─────────────────── */
+  apply();
+
+  if (navigator.storage && navigator.storage.persist) {{
+    navigator.storage.persist();
+  }}
+}});
+</script>
 
 
 
 
+<div id="snackbar"></div>
 
 
 
@@ -1305,7 +1389,8 @@ def build_html(shows: List[dict],
 
         cards.append(
             f'<div class="card{" hidden" if "future" in tag_keys else ""}" '
-            f'data-tags="{" ".join(tag_keys)}">'
+            f'data-tags="{" ".join(tag_keys)}" '
+            f'data-slug="{slug}">'
             f'{img}'
             f'<div class="card-body">'
             f'{title_html}'
