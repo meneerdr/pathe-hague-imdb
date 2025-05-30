@@ -971,39 +971,41 @@ document.addEventListener('DOMContentLoaded', () => {{
   const watched = loadSet();
 
   /* ─────────────────── apply() → filter + watched visuals ─────────────────── */
-    function apply() {{
+    function apply () {{
       const active        = chips.filter(c => c.classList.contains('active'))
                                  .map(c => c.dataset.tag);
 
-      const allOn         = active.includes('all');
       const watchedChipOn = active.includes('watched');
+      const allOn         = active.includes('all');
 
-      cards.forEach(card => {{
-        const slug      = card.dataset.slug;
-        const tags      = card.dataset.tags.split(' ');
-        const isWatched = watched.has(slug);
+      /* ➜ NEW: at least one thematic chip (kids, web, dolby, …) is on */
+      const topicalOn     = active.some(t => !['watched', 'all'].includes(t));
 
-        let show;
+      /* ---------- visibility ---------- */
+      let show;
+      if (active.length === 0) {{                     // no chip at all
+        show = !tags.includes('future');              // default behaviour
+      }} else {{
+        show = active.some(t => tags.includes(t));    // chip match?
+      }}
 
-        if (allOn) {{
-          /* “All” chip ON → always show  */
-          show = true;
+      /* hide watched only in the **default** view */
+      if (isWatched && !watchedChipOn && !allOn && !topicalOn) {{
+        show = false;
+      }}
 
-        }} else if (active.length === 0) {{
-          /* ★★ default view ★★ – hide future & watched cards */
-          show = !tags.includes('future') && !isWatched;
+      /* if Watched chip itself is on, always show watched cards */
+      if (watchedChipOn && isWatched) {{
+        show = true;
+      }}
 
-        }} else {{
-          /* any other combination of chips */
-          show = active.some(t => tags.includes(t));
-          if (isWatched && !watchedChipOn) show = false;
-          if (watchedChipOn && isWatched)  show = true;
-        }}
+      card.classList.toggle('hidden', !show);
 
-        card.classList.toggle('hidden', !show);
-        card.classList.toggle('dim', isWatched && (watchedChipOn || allOn));
-      }});
+      /* ---------- dimming ---------- */
+      const dimIt = isWatched && (watchedChipOn || allOn || topicalOn);
+      card.classList.toggle('dim', dimIt);
     }}
+
 
   /* ─────────────────── toggleWatch(card) ─────────────────── */
   function toggleWatch(card) {{
