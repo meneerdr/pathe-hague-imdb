@@ -647,11 +647,12 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   }
 }
 
-/* ②  Touch screens — sink only on a *true* long-press (via JS) */
-.card.pressing {
-  .card:active{
-    transform:scale(.97);
-    box-shadow:0 1px 2px #0002;
+/* ②  Touch screens — sink only on a *true* long-press (via JS) - disabled */
+@media (hover: none) and (pointer: coarse) {
+  /* cancel the shrink/sink on tap */
+  .card:active {
+    transform: none !important;
+    box-shadow: 0 1px 4px #0003 !important;  /* match your normal shadow */
   }
 }
 
@@ -1195,43 +1196,10 @@ document.addEventListener('DOMContentLoaded', () => {{
     }});
 
   /* ─────────────────── long-press detection (robust) ─────────────────── */
-  const LONG = 1000;                     /* ms – press length for “watched” */
+  const LONG = 1000;                     /* ms – press length for “watched”  */
 
-  cards.forEach(card => {{               /* ← doubled braces */
+  cards.forEach(card => {{              /* <-- doubled braces! */
     let timer, startX, startY;
-
-    // helper to clear the hold state
-    const cancelPress = () => {{
-      clearTimeout(timer);
-      card.classList.remove('pressing');
-    }};
-
-    card.addEventListener('pointerdown', e => {{
-      startX = e.clientX;
-      startY = e.clientY;
-      // start the 1 s hold timer
-      timer = setTimeout(() => {{
-        card.classList.add('pressing');  // apply your shrink CSS
-        toggleWatch(card);                // then hide/unhide
-      }}, LONG);
-
-      card.addEventListener('contextmenu', ev => ev.preventDefault());
-    }});
-
-    // any of these should cancel the hold
-    card.addEventListener('pointerup',     cancelPress);
-    card.addEventListener('pointerleave',  cancelPress);
-    card.addEventListener('pointercancel', cancelPress);
-
-    // if the finger moves too much, it’s a swipe, not a hold
-    card.addEventListener('pointermove', e => {{
-      if (Math.abs(e.clientX - startX) > 10 ||
-          Math.abs(e.clientY - startY) > 10) {{
-        cancelPress();
-      }}
-    }});
-  }});                                    /* ← doubled braces */
-
 
     /* cancel helper ---------------------------------------------------- */
     const cancel = () => clearTimeout(timer);
@@ -1272,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', () => {{
 
       let idx = 0;                         /* which face is active */
       let x0, y0;
-      const SWIPE_DIST   = 10;             /* px – horizontal threshold */
+      const SWIPE_DIST   = 11;             /* px – horizontal threshold */
       const MAX_VERTICAL = 500;            /* px – allow some vertical drift */
 
       card.addEventListener('pointerdown', e => {{
