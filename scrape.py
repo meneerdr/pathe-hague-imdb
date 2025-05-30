@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {{
   }});
 
   /* ─────────────────── long-press detection (robust) ─────────────────── */
-  const LONG = 500;                     /* ms – press length for “watched”  */
+  const LONG = 1000;                     /* ms – press length for “watched”  */
 
   cards.forEach(card => {{              /* <-- doubled braces! */
     let timer, startX, startY;
