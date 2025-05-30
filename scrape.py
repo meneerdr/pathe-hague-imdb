@@ -935,6 +935,7 @@ HTML_TMPL = """<!doctype html>
   <h1>🎬 Pathé Den Haag · {formatted_date}</h1>
   <!-- quick-filter chips -->
   <div class="filter-bar">
+    <span class="chip" data-tag="all">All</span> 
     <span class="chip" data-tag="now">Now</span>
     <span class="chip" data-tag="book">Book</span>
     <span class="chip" data-tag="new">New</span>
@@ -970,33 +971,34 @@ document.addEventListener('DOMContentLoaded', () => {{
   const watched = loadSet();
 
   /* ─────────────────── apply() → filter + watched visuals ─────────────────── */
-  function apply() {{
-    const active        = chips.filter(c => c.classList.contains('active'))
-                               .map(c => c.dataset.tag);
-    const watchedChipOn = active.includes('watched');
+    function apply() {{
+      const active        = chips.filter(c => c.classList.contains('active'))
+                                 .map(c => c.dataset.tag);
 
-    cards.forEach(card => {{
-      const slug       = card.dataset.slug;
-      const tags       = card.dataset.tags.split(' ');
-      if (!slug) return;      /* card lacks slug → never treat it as watched */
-      const isWatched  = watched.has(slug);
+      const allOn         = active.includes('all');       // NEW
+      const watchedChipOn = active.includes('watched');
 
-      /* baseline visibility (quick-filter) */
-      let show = active.length === 0
-                 ? !tags.includes('future')
-                 : active.some(t => tags.includes(t));
+      cards.forEach(card => {{
+        const slug      = card.dataset.slug;
+        const tags      = card.dataset.tags.split(' ');
+        const isWatched = watched.has(slug);
 
-      /* hide watched unless “Watched” chip is ON */
-      if (isWatched && !watchedChipOn) show = false;
+        /* ── visibility ────────────────────────────────────── */
+        let show;
+        if (allOn) {{                         // show everything
+          show = true;
+        }} else if (active.length === 0) {{
+          show = !tags.includes('future');    // default view
+        }} else {{
+          show = active.some(t => tags.includes(t));
+          if (isWatched && !watchedChipOn) show = false;
+          if (watchedChipOn && isWatched)  show = true;
+        }}
 
-      /* If the Watched chip is ON and this card is watched, always show it */
-      if (watchedChipOn && isWatched) show = true;
-
-      card.classList.toggle('hidden', !show);
-      card.classList.toggle('dim',    isWatched && watchedChipOn);
-    }});
-  }}
-
+        card.classList.toggle('hidden', !show);
+        card.classList.toggle('dim', watchedChipOn && isWatched && !allOn);
+      }});
+    }}
 
   /* ─────────────────── toggleWatch(card) ─────────────────── */
   function toggleWatch(card) {{
@@ -1033,13 +1035,23 @@ document.addEventListener('DOMContentLoaded', () => {{
   }}
 
   /* ─────────────────── chip click behaviour ─────────────────── */
-  chips.forEach(chip => {{
-    chip.addEventListener('click', () => {{
-      chip.classList.toggle('active');
-      apply();
-      window.scrollTo({{ top: 0, behavior: 'smooth' }});
+    chips.forEach(chip => {{
+      chip.addEventListener('click', () => {{
+        chip.classList.toggle('active');
+
+        const tag = chip.dataset.tag;
+        if (tag === 'all' && chip.classList.contains('active')) {{
+          /* “All” turned on → clear the rest */
+          chips.forEach(c => {{ if (c !== chip) c.classList.remove('active'); }});
+        }} else if (tag !== 'all') {{
+          /* any other chip clicked → switch “All” off */
+          chips.find(c => c.dataset.tag === 'all')?.classList.remove('active');
+        }}
+
+        apply();
+        window.scrollTo({{ top: 0, behavior: 'smooth' }});
+      }});
     }});
-  }});
 
   /* ─────────────────── long-press detection (robust) ─────────────────── */
   const LONG = 1000;                     /* ms – press length for “watched”  */
