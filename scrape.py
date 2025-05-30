@@ -975,7 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {{
       const active        = chips.filter(c => c.classList.contains('active'))
                                  .map(c => c.dataset.tag);
 
-      const allOn         = active.includes('all');       // NEW
+      const allOn         = active.includes('all');
       const watchedChipOn = active.includes('watched');
 
       cards.forEach(card => {{
@@ -983,13 +983,18 @@ document.addEventListener('DOMContentLoaded', () => {{
         const tags      = card.dataset.tags.split(' ');
         const isWatched = watched.has(slug);
 
-        /* ── visibility ────────────────────────────────────── */
         let show;
-        if (allOn) {{                         // show everything
+
+        if (allOn) {{
+          /* “All” chip ON → always show  */
           show = true;
+
         }} else if (active.length === 0) {{
-          show = !tags.includes('future');    // default view
+          /* ★★ default view ★★ – hide future & watched cards */
+          show = !tags.includes('future') && !isWatched;
+
         }} else {{
+          /* any other combination of chips */
           show = active.some(t => tags.includes(t));
           if (isWatched && !watchedChipOn) show = false;
           if (watchedChipOn && isWatched)  show = true;
