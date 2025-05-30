@@ -1001,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {{
         }}
 
         card.classList.toggle('hidden', !show);
-        card.classList.toggle('dim', watchedChipOn && isWatched && !allOn);
+        card.classList.toggle('dim', isWatched && (watchedChipOn || allOn));
       }});
     }}
 
