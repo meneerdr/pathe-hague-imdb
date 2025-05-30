@@ -650,7 +650,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 /* ②  Touch screens — slight sink on active press  */
 @media (hover: none) and (pointer: coarse) {
   .card:active {
-    transform: scale(.97);
+    transform: scale(.99);
     box-shadow: 0 1px 2px #0002;
   }
 }
