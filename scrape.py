@@ -1265,8 +1265,11 @@ document.addEventListener('DOMContentLoaded', () => {{
 
         card.releasePointerCapture(e.pointerId);
       }});
-    }});  
 
+      card.addEventListener('pointercancel', e => {{
+        card.releasePointerCapture(e.pointerId);
+      }});
+    }});
 
 /* ---------- new helpers ---------- */
 fillShowTimes();
