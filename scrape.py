@@ -878,7 +878,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 
 /* dim watched cards when the “Watched” chip is active */
-.card.dim { opacity: .35; }
+.card.dim { opacity: .5; }
 
 /* snackbar that slides up from the bottom */
 #snackbar{
@@ -1014,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {{
 
   /* ─────────────────── snackbar with Undo ─────────────────── */
   function showUndo(slug, wasWatched) {{
-    const msg = wasWatched ? 'Restored' : 'Marked as watched';
+    const msg = wasWatched ? 'Restored' : 'Hidden';
     snackbar.innerHTML = `${{msg}} <button id="undo">Undo</button>`;
     snackbar.classList.add('visible');
 
