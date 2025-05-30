@@ -647,12 +647,11 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   }
 }
 
-/* ②  Touch screens — sink only on a *true* long-press (via JS) - disabled */
+/* ②  Touch screens — slight sink on active press  */
 @media (hover: none) and (pointer: coarse) {
-  /* cancel the shrink/sink on tap */
   .card:active {
-    transform: none !important;
-    box-shadow: 0 1px 4px #0003 !important;  /* match your normal shadow */
+    transform: scale(.97);
+    box-shadow: 0 1px 2px #0002;
   }
 }
 
