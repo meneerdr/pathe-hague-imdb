@@ -82,6 +82,9 @@ FAV_CINEMAS = [
 # Remove any (...) when a movie has no imdbID for the fallback link
 PAREN_RE = re.compile(r"\s*\([^)]*\)")
 
+os.environ["TZ"] = "Europe/Amsterdam"
+time.tzset()
+
 # ─────────────────────── logging ───────────────────────
 LOG = logging.getLogger("pathe")
 LOG.setLevel(logging.INFO)
