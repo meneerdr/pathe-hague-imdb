@@ -914,6 +914,12 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   -webkit-touch-callout: none; /* iOS context menu */
 }
 
+/* cinema faces – only one visible at a time */
+.faces        { position: relative; }
+.face         { display: none; }
+.face.active  { display: block; }
+.face{ padding-bottom:.25rem; }   /* keeps the old spacing inside a face */
+
 """
 
 
@@ -928,6 +934,9 @@ HTML_TMPL = """<!doctype html>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Tiny Swiper-->
+  <script defer src="tiny-swipe.min.js"></script>
 
   <style>{css}</style>
 </head>
@@ -1019,7 +1028,6 @@ document.addEventListener('DOMContentLoaded', () => {{
       }});
     }}
 
-
   /* ─────────────────── toggleWatch(card) ─────────────────── */
   function toggleWatch(card) {{
     const slug        = card.dataset.slug;
@@ -1109,6 +1117,33 @@ document.addEventListener('DOMContentLoaded', () => {{
   if (navigator.storage && navigator.storage.persist) {{
     navigator.storage.persist();
   }}
+
+
+  /* ─────────────────── swipe to flip cinema faces ─────────────────── */
+    /* inside the existing DOMContentLoaded handler — braces doubled! */
+    cards.forEach(card => {{
+      const faces = [...card.querySelectorAll('.face')];
+      if (faces.length <= 1) return;           /* nothing to swipe */
+
+      let idx = 0;                             /* start on the info face */
+
+      /* very small left/right swipe detector (pointer events) */
+      let x0;
+      card.addEventListener('pointerdown', e => {{ x0 = e.clientX; }});
+      card.addEventListener('pointerup',   e => {{
+        const dx = e.clientX - x0;
+        if (Math.abs(dx) < 40) return;         /* not far enough */
+
+        faces[idx].classList.remove('active'); /* hide current face */
+
+        /* left → next, right → previous, wrap around  */
+        idx = (dx < 0) ? (idx + 1) % faces.length
+                       : (idx - 1 + faces.length) % faces.length;
+
+        faces[idx].classList.add('active');    /* show new face */
+      }});
+    }});
+
 }});
 </script>
 
@@ -1465,19 +1500,50 @@ def build_html(shows: List[dict],
         if zone_next24 == 0 and not bookable and not s.get("isComingSoon"):
             tag_keys.append("future")
 
-        cards.append(
-            f'<div class="card{" hidden" if "future" in tag_keys else ""}" '
-            f'data-tags="{" ".join(tag_keys)}" '
-            f'data-slug="{slug}">'
-            f'{img}'
-            f'<div class="card-body">'
-            f'{title_html}'
-            f'{ratings_html}'
-            f'{theaters_html}'
-            f'{buttons_line}'
-            f'</div>'
+        # ---------- swipe-faces (main + one per playing cinema) ----------
+        faces   = []
+        face_id = 0            # first face
+
+        # ① MAIN face = the classic card body
+        faces.append(
+            f'<div class="face active" data-face="{face_id}">'
+            f'{ratings_html}{theaters_html}{buttons_line}'
             f'</div>'
         )
+
+        # ② One extra face per cinema that really shows the film today
+        for cin_slug, cin_name in FAV_CINEMAS:
+            if slug not in cinemas.get(cin_slug, set()):
+                continue
+            face_id += 1
+            times_today = (
+                cinema_showtimes.get(cin_slug, {})
+                                .get(slug, {})
+                                .get("days", {})
+                                .get(date, {})
+                                .get("times", [])
+            )
+            label = times_today[0][:5] if times_today else '&nbsp;'
+            faces.append(
+                f'<div class="face" data-face="{face_id}">'
+                f'<div class="cinema-logo" style="margin-bottom:.4rem;">{cin_name[:2].upper()}</div>'
+                f'<div style="font-size:1.1rem;font-weight:600;">{label}</div>'
+                f'</div>'
+            )
+
+        faces_html = '<div class="faces">' + ''.join(faces) + '</div>'
+
+        # ---------- final card ----------
+        hidden_cls = " hidden" if "future" in tag_keys else ""
+        tags_str   = " ".join(tag_keys)
+
+        cards.append(
+            f'<div class="card{hidden_cls}" data-tags="{tags_str}" data-slug="{slug}">'
+            f'{img}'
+            f'<div class="card-body">{title_html}{faces_html}</div>'
+            f'</div>'
+        )
+
 
     now = dt.datetime.now(ZoneInfo("Europe/Amsterdam")).strftime("%Y-%m-%d %H:%M %Z")
 
