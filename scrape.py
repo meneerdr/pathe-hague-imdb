@@ -729,6 +729,18 @@ h1{font-size:1.5rem;margin:0 0 1rem}
    margin-top: .3rem;
  }
 
+ /* any cinema‐logo in face 1,2,3… */
+.faces .face:not([data-face="0"]) .cinema-logo {
+  background: darkgrey;
+  color: #fff;
+}
+
+/* any showtime‐button in face 1,2,3… */
+.faces .face:not([data-face="0"]) .next-showtimes-button{
+  background: lightgrey;
+  color: #fff;
+}
+
 /* Quick-filter toolbar */
 .filter-bar{
   position:sticky;   /* ← makes it “float” */
@@ -796,7 +808,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .next-showtimes-button {
-  background-color: darkgrey;
+  background-color: lightgrey;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -826,7 +838,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .release-date-button {
-  background-color: darkgray;
+  background-color: lightgrey;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -851,7 +863,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .soon-button {
-  background-color: darkgrey;
+  background-color: lightgrey;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -873,7 +885,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 /* Non-kids titles: black age rating */
 .adult-rating-button {          /* isKids == false */
-  background-color: darkgrey;
+  background-color: lightgrey;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -976,6 +988,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   margin-top: 0;
   margin-bottom: 0;
 }
+
 
 """
 
@@ -1230,6 +1243,7 @@ document.addEventListener('DOMContentLoaded', () => {{
       /* relaxed left/right swipe detector (pointer events) */
       let x0, y0;
       const SWIPE_DIST = 20;                   /* px – more forgiving */
+      const MAX_VERTICAL = 50;
       card.addEventListener('pointerdown', e => {{ 
         x0 = e.clientX;
         y0 = e.clientY;
@@ -1238,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {{
         const dx = e.clientX - x0;
         const dy = e.clientY - y0;
         /* trigger only if horizontal move is dominant and long enough */
-        if (Math.abs(dx) < SWIPE_DIST || Math.abs(dx) <= Math.abs(dy)) return;
+        if (Math.abs(dx) < SWIPE_DIST || Math.abs(dy) > MAX_VERTICAL) return;
 
         faces[idx].classList.remove('active'); /* hide current face */
 
