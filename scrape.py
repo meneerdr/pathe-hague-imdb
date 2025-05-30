@@ -906,6 +906,14 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   -webkit-appearance:none;  /* nuke iOS default bevel */
 }
 
+
+/* Prevent iOS long-press text-selection / callout on cards */
+.card, .card *{
+  -webkit-user-select: none;   /* Safari / old WebKit */
+  user-select: none;
+  -webkit-touch-callout: none; /* iOS context menu */
+}
+
 """
 
 
