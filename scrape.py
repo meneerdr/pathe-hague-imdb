@@ -1701,29 +1701,30 @@ def build_html(shows: List[dict],
         )
 
         # ② Single extra face that shows *all* cinemas at once
-        face_id += 1
-        blocks = []
-        for cin_slug, cin_name in FAV_CINEMAS:
-            # only show those cinemas where the film actually plays today
-            if slug not in cinemas.get(cin_slug, set()):
-                continue
-            code = cin_name[:2].upper()
-            blocks.append(
-                f'<div class="cinema-block">'
-                f'  <a href="{film_url}" target="_blank" style="text-decoration:none;">'
-                f'<span class="cinema-logo" data-code="{code}">{escape(cin_name)}</span>'
-                f'  </a>'
-                f'  <div class="buttons-line"></div>'
-                f'</div>'
+        if next_showtimes > 0:
+            face_id += 1
+            blocks = []
+            for cin_slug, cin_name in FAV_CINEMAS:
+                # only show those cinemas where the film actually plays today
+                if slug not in cinemas.get(cin_slug, set()):
+                    continue
+                code = cin_name[:2].upper()
+                blocks.append(
+                    f'<div class="cinema-block">'
+                    f'  <a href="{film_url}" target="_blank" style="text-decoration:none;">'
+                    f'<span class="cinema-logo" data-code="{code}">{escape(cin_name)}</span>'
+                    f'  </a>'
+                    f'  <div class="buttons-line"></div>'
+                    f'</div>'
+                )
+
+            faces.append(
+                f'<div class="face" data-face="{face_id}">'
+                + "".join(blocks) +
+                "</div>"
             )
 
-        faces.append(
-            f'<div class="face" data-face="{face_id}">'
-            + "".join(blocks) +
-            "</div>"
-        )
-
-        faces_html = '<div class="faces">' + "".join(faces) + '</div>'
+            faces_html = '<div class="faces">' + "".join(faces) + '</div>'
 
 
         # ---------- final card ----------
