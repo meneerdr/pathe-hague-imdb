@@ -139,7 +139,7 @@ def fetch_cinema_slugs(cinema_slug: str, date: str) -> Set[str]:
     LOG.warning("· unexpected .shows for %s: %r", cinema_slug, shows_obj)
     return set()
 
-def fetch_cinema_showtimes_data(cinema_slug: str) -> dict[str, dict]:
+def fetch_cinema_showtimes_data(cinema_slug: str, for_date: str) -> dict[str, dict]:
     """
     Return a mapping that *does* contain showtimes:
 
@@ -164,12 +164,9 @@ def fetch_cinema_showtimes_data(cinema_slug: str) -> dict[str, dict]:
     shows_obj = root.get("shows", {}) or {}
 
     # figure out which date(s) matter for this run
-    today = dt.date.today().isoformat()
-
+    today = for_date
     for film_slug, film_data in shows_obj.items():
-        days_obj = film_data.get("days") or {}
-        for day, day_info in days_obj.items():
-            # we only need showtimes for 'today' (the date passed to build_html)
+        for day, day_info in film_data.get("days",{}).items():
             if day != today:
                 continue
 
@@ -1867,7 +1864,7 @@ def main():
         # grab exactly those movies playing on args.date
         cinemas[slug] = fetch_cinema_slugs(slug, args.date)
         # still fetch the full multi-day schedule for your “next-showing” button logic
-        cinema_showtimes[slug] = fetch_cinema_showtimes_data(slug)
+        cinema_showtimes[slug] = fetch_cinema_showtimes_data(slug, args.date)
 
     # OMDb  (daily cache; API key optional)
     enrich_with_omdb(shows, None if args.skip_omdb else key)
