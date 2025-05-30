@@ -715,7 +715,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .faces .cinema-logo {
   display:inline-block;
   padding:.2rem .1rem;
-  background:darkgrey;
+  background:#555;
   color:#fff;
   font-weight:bold;
   font-size: .85rem;
@@ -731,13 +731,13 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
  /* any cinema‐logo in face 1,2,3… */
 .faces .face:not([data-face="0"]) .cinema-logo {
-  background: darkgrey;
+  background: #555;
   color: #fff;
 }
 
 /* any showtime‐button in face 1,2,3… */
 .faces .face:not([data-face="0"]) .next-showtimes-button{
-  background: lightgrey;
+  background: darkgrey;
   color: #fff;
 }
 
@@ -828,7 +828,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 .runtime-button {
-  background-color: lightslategrey; /* was SteelBlue */
+  background-color: darkgrey; /* was lightslategrey */
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -931,6 +931,8 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   .card { background:#111; border-color:#222; }
   .ratings-inline, .theaters-inline { color:#ccc; }
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
+  .faces .face:not([data-face="0"]) .cinema-logo { background: #555; color: #fff; }
+
 }
 
 /* utility for JS filter */
