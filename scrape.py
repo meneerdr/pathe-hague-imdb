@@ -647,8 +647,8 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   }
 }
 
-/* ②  Touch screens — slight sink on active press  */
-@media (hover:none) and (pointer:coarse){
+/* ②  Touch screens — sink only on a *true* long-press (via JS) */
+.card.pressing {
   .card:active{
     transform:scale(.97);
     box-shadow:0 1px 2px #0002;
@@ -1195,10 +1195,28 @@ document.addEventListener('DOMContentLoaded', () => {{
     }});
 
   /* ─────────────────── long-press detection (robust) ─────────────────── */
-  const LONG = 1000;                     /* ms – press length for “watched”  */
 
-  cards.forEach(card => {{              /* <-- doubled braces! */
-    let timer, startX, startY;
+    cards.forEach(card => {{
+      let timer;
+      const LONG = 1000;
+
+      function clearPress() {{
+        clearTimeout(timer);
+        card.classList.remove('pressing');
+      }}
+
+      card.addEventListener('pointerdown', e => {{
+        timer = setTimeout(() => {{
+          card.classList.add('pressing');  // shrink only on *hold*
+          toggleWatch(card);               // your hide/unhide
+        }}, LONG);
+      }});
+
+      card.addEventListener('pointerup',   clearPress);
+      card.addEventListener('pointerleave',clearPress);
+      card.addEventListener('pointercancel',clearPress);
+    }});
+
 
     /* cancel helper ---------------------------------------------------- */
     const cancel = () => clearTimeout(timer);
