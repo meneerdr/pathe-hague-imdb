@@ -710,18 +710,24 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 /* Cinema badges (YP / BU / SC) – identical look everywhere */
-.cinema-logo{
+
+.theaters-inline .cinema-logo,
+.faces .cinema-logo {
   display:inline-block;
-  padding:2px 5px;               /* same as .next-showtimes-button */
+  padding:.2rem .1rem;
   background:darkgrey;
   color:#fff;
   font-weight:bold;
-  font-size:.8rem;
+  font-size: .85rem;
   border-radius:4px;
   text-align:center;
   white-space:nowrap;
-  min-width:25px;                /* keeps the grid nicely aligned */
+  min-width:25px;     
 }
+
+ .faces .cinema-logo {
+   margin-top: .3rem;
+ }
 
 /* Quick-filter toolbar */
 .filter-bar{
@@ -966,6 +972,10 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .showtime { padding:1px 4px; border:1px solid #ccc; border-radius:3px;
             font-variant-numeric: tabular-nums; }
 
+.ratings-inline:empty {
+  margin-top: 0;
+  margin-bottom: 0;
+}
 
 """
 
@@ -1021,12 +1031,13 @@ function fillShowTimes() {{
 
     card.querySelectorAll('.face[data-face]:not([data-face="0"])')
         .forEach(face => {{
-          const code = face.querySelector('.cinema-logo').textContent.trim();
-          const box  = face.querySelector('.timebox');
+          const logoEl = face.querySelector('.cinema-logo');
+          const code   = logoEl.dataset.code || logoEl.textContent.trim();
+          const box  = face.querySelector('.buttons-line');
 
           if (timesByCx[code]?.length) {{
             box.innerHTML = timesByCx[code]
-              .map(t => `<span class="showtime">${{t}}</span>`).join('');
+              .map(t => `<span class="next-showtimes-button">${{t}}</span>`).join('');
           }} else {{
             box.textContent = '–';
           }}
@@ -1216,12 +1227,18 @@ document.addEventListener('DOMContentLoaded', () => {{
 
       let idx = 0;                             /* start on the info face */
 
-      /* very small left/right swipe detector (pointer events) */
-      let x0;
-      card.addEventListener('pointerdown', e => {{ x0 = e.clientX; }});
+      /* relaxed left/right swipe detector (pointer events) */
+      let x0, y0;
+      const SWIPE_DIST = 20;                   /* px – more forgiving */
+      card.addEventListener('pointerdown', e => {{ 
+        x0 = e.clientX;
+        y0 = e.clientY;
+      }});
       card.addEventListener('pointerup',   e => {{
         const dx = e.clientX - x0;
-        if (Math.abs(dx) < 40) return;         /* not far enough */
+        const dy = e.clientY - y0;
+        /* trigger only if horizontal move is dominant and long enough */
+        if (Math.abs(dx) < SWIPE_DIST || Math.abs(dx) <= Math.abs(dy)) return;
 
         faces[idx].classList.remove('active'); /* hide current face */
 
@@ -1628,8 +1645,9 @@ def build_html(shows: List[dict],
 
             faces.append(
                 f'<div class="face" data-face="{face_id}">'
-                f'  <div class="cinema-logo">{cin_name[:2].upper()}</div>'
-                f'  <div class="timebox"></div>'              # ← inject here later
+                f'  <div class="cinema-logo" data-code="{cin_name[:2].upper()}">'
+                f'{escape(cin_name)}</div>'
+                f'  <div class="buttons-line"></div>'         # ← now re-use your badge bar
                 f'</div>'
             )
 
