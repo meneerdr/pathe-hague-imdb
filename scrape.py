@@ -980,6 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {{
     }});
   }}
 
+
   /* ─────────────────── toggleWatch(card) ─────────────────── */
   function toggleWatch(card) {{
     const slug        = card.dataset.slug;
@@ -1037,6 +1038,8 @@ document.addEventListener('DOMContentLoaded', () => {{
       startX = e.clientX;
       startY = e.clientY;
       timer  = setTimeout(() => toggleWatch(card), LONG);
+
+    card.addEventListener('contextmenu', e => e.preventDefault());
     }});
 
     /* abort on any of these ------------------------------------------- */
