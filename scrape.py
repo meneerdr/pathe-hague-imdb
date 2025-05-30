@@ -1242,8 +1242,8 @@ document.addEventListener('DOMContentLoaded', () => {{
 
       /* relaxed left/right swipe detector (pointer events) */
       let x0, y0;
-      const SWIPE_DIST = 20;                   /* px – more forgiving */
-      const MAX_VERTICAL = 50;
+      const SWIPE_DIST = 10;                   /* px – more forgiving */
+      const MAX_VERTICAL = 100;
       card.addEventListener('pointerdown', e => {{ 
         x0 = e.clientX;
         y0 = e.clientY;
