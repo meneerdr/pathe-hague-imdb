@@ -1235,38 +1235,33 @@ document.addEventListener('DOMContentLoaded', () => {{
     /* inside your DOMContentLoaded handler — note the doubled {{ }} */
     cards.forEach(card => {{
       const faces = [...card.querySelectorAll('.face')];
-      if (faces.length <= 1) return;           /* nothing to swipe */
+      if (faces.length <= 1) return;       /* nothing to swipe */
 
-      let idx = 0;                             /* which face is active */
+      let idx = 0;                         /* which face is active */
       let x0, y0;
-      const SWIPE_DIST   = 20;                  /* horizontal threshold */
-      const MAX_VERTICAL = 300;                 /* vertical max drift */
+      const SWIPE_DIST   = 10;             /* px – horizontal threshold */
+      const MAX_VERTICAL = 500;            /* px – allow some vertical drift */
 
       card.addEventListener('pointerdown', e => {{
         x0 = e.clientX;
         y0 = e.clientY;
-        card.setPointerCapture(e.pointerId);    /* ensure we keep the events */
-      }});
-
-      card.addEventListener('pointermove', e => {{
-        if (e.pointerType !== 'touch') return;  /* ignore mouse drags here */
-
-        const dx = e.clientX - x0;
-        const dy = e.clientY - y0;
-        if (Math.abs(dx) < SWIPE_DIST || Math.abs(dy) > MAX_VERTICAL) return;
-
-        faces[idx].classList.remove('active');
-        idx = (dx < 0)
-          ? (idx + 1) % faces.length
-          : (idx - 1 + faces.length) % faces.length;
-        faces[idx].classList.add('active');
-
-        /* reset so a single long drag only flips once */
-        x0 = e.clientX;
-        y0 = e.clientY;
+        card.setPointerCapture(e.pointerId);
       }});
 
       card.addEventListener('pointerup', e => {{
+        const dx = e.clientX - x0;
+        const dy = e.clientY - y0;
+
+        // only flip if you’ve moved enough horizontally,
+        // and haven’t dragged too far vertically
+        if (Math.abs(dx) >= SWIPE_DIST && Math.abs(dy) <= MAX_VERTICAL) {{
+          faces[idx].classList.remove('active');
+          idx = (dx < 0)
+            ? (idx + 1) % faces.length
+            : (idx - 1 + faces.length) % faces.length;
+          faces[idx].classList.add('active');
+        }}
+
         card.releasePointerCapture(e.pointerId);
       }});
     }});  
