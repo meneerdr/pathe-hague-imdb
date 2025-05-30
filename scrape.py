@@ -708,17 +708,19 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .theaters-inline span{
   text-align:center;font-weight:600;
 }
-.theaters-inline .cinema-logo {
-  display: inline-block;
-  padding: .2rem .1rem;
-  background: #bbb;
-  color: #fff;
-  font-size: .85rem;
-  border-radius: 4px;
-  min-width: 25px;
-  text-align: center;
-  justify-content: center;
-  width: auto;
+
+/* Cinema badges (YP / BU / SC) – identical look everywhere */
+.cinema-logo{
+  display:inline-block;
+  padding:2px 5px;               /* same as .next-showtimes-button */
+  background:darkgrey;
+  color:#fff;
+  font-weight:bold;
+  font-size:.8rem;
+  border-radius:4px;
+  text-align:center;
+  white-space:nowrap;
+  min-width:25px;                /* keeps the grid nicely aligned */
 }
 
 /* Quick-filter toolbar */
