@@ -929,7 +929,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 @media(prefers-color-scheme:dark){
   html,body{ background:#000; color:#e0e0e0; }
   .card { background:#111; border-color:#222; }
-  .ratings-inline, .theaters-inline { color:#ccc; }
+  .ratings-inline, .theaters-inline { color:#ccc; touch-action: pan-y; }
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
 }
 
@@ -1232,42 +1232,45 @@ document.addEventListener('DOMContentLoaded', () => {{
   }}
 
     /* ─────────────────── swipe to flip cinema faces ─────────────────── */
-    /* inside the existing DOMContentLoaded handler — braces doubled! */
+    /* inside your DOMContentLoaded handler — note the doubled {{ }} */
     cards.forEach(card => {{
       const faces = [...card.querySelectorAll('.face')];
       if (faces.length <= 1) return;           /* nothing to swipe */
 
-      let idx = 0;                              /* which face is showing */
+      let idx = 0;                             /* which face is active */
       let x0, y0;
-      const SWIPE_DIST  = 10;                   /* horizontal threshold */
-      const MAX_VERTICAL = 300;                 /* you already had this */
+      const SWIPE_DIST   = 20;                  /* horizontal threshold */
+      const MAX_VERTICAL = 300;                 /* vertical max drift */
 
-      card.addEventListener('pointerdown', e => {{ 
+      card.addEventListener('pointerdown', e => {{
         x0 = e.clientX;
         y0 = e.clientY;
-        card.setPointerCapture(e.pointerId);     /* ← ① capture the pointer */
+        card.setPointerCapture(e.pointerId);    /* ensure we keep the events */
       }});
 
-      card.addEventListener('pointermove', e => {{ /* ← ② detect on move */
+      card.addEventListener('pointermove', e => {{
+        if (e.pointerType !== 'touch') return;  /* ignore mouse drags here */
+
         const dx = e.clientX - x0;
         const dy = e.clientY - y0;
         if (Math.abs(dx) < SWIPE_DIST || Math.abs(dy) > MAX_VERTICAL) return;
 
         faces[idx].classList.remove('active');
         idx = (dx < 0)
-            ? (idx + 1) % faces.length
-            : (idx - 1 + faces.length) % faces.length;
+          ? (idx + 1) % faces.length
+          : (idx - 1 + faces.length) % faces.length;
         faces[idx].classList.add('active');
 
-        /* reset so you only flip once per drag */
+        /* reset so a single long drag only flips once */
         x0 = e.clientX;
         y0 = e.clientY;
       }});
 
-      card.addEventListener('pointerup', e => {{   /* ← ③ release capture */
+      card.addEventListener('pointerup', e => {{
         card.releasePointerCapture(e.pointerId);
       }});
     }});  
+
 
 /* ---------- new helpers ---------- */
 fillShowTimes();
