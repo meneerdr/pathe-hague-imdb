@@ -22,6 +22,8 @@ from zoneinfo import ZoneInfo
 from typing import Dict, List, Optional, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
+import json
+from html import escape
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -958,6 +960,11 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .face.active  { display: block; }
 .face{ padding-bottom:.25rem; }   /* keeps the old spacing inside a face */
 
+.timebox  { display:flex; flex-wrap:wrap; gap:.3rem; justify-content:center; }
+.showtime { padding:1px 4px; border:1px solid #ccc; border-radius:3px;
+            font-variant-numeric: tabular-nums; }
+
+
 """
 
 
@@ -1003,6 +1010,48 @@ HTML_TMPL = """<!doctype html>
 
   <!-- tiny JS for the quick-filter (all braces are doubled for str.format) -->
 <script>
+const showTimes = {show_times};      /* ← injected by .format() */
+
+function fillShowTimes() {{
+  document.querySelectorAll('.card').forEach(card => {{
+    const slug      = card.dataset.slug;
+    const timesByCx = showTimes[slug] || {{}};
+
+    card.querySelectorAll('.face[data-face]:not([data-face="0"])')
+        .forEach(face => {{
+          const code = face.querySelector('.cinema-logo').textContent.trim();
+          const box  = face.querySelector('.timebox');
+
+          if (timesByCx[code]?.length) {{
+            box.innerHTML = timesByCx[code]
+              .map(t => `<span class="showtime">${{t}}</span>`).join('');
+          }} else {{
+            box.textContent = '–';
+          }}
+        }});
+  }});
+}}
+
+function wireFaceTabs() {{
+  document.querySelectorAll('.card').forEach(card => {{
+    const faces = [...card.querySelectorAll('.face')];
+
+    card.querySelectorAll('.theaters-inline .cinema-logo')
+        .forEach((logo, idx) => {{
+          logo.addEventListener('click', () => {{
+            faces.forEach(f => f.classList.remove('active'));
+            faces[idx + 1].classList.add('active');   // +1 skips the primary face
+          }});
+        }});
+
+    /* optional: poster click → return to primary face */
+    card.querySelector('img')?.addEventListener('click', () => {{
+      faces.forEach(f => f.classList.remove('active'));
+      faces[0].classList.add('active');
+    }});
+  }});
+}}
+
 document.addEventListener('DOMContentLoaded', () => {{
   /* ─────────────────── DOM references ─────────────────── */
   const chips    = [...document.querySelectorAll('.chip')];
@@ -1181,6 +1230,11 @@ document.addEventListener('DOMContentLoaded', () => {{
         faces[idx].classList.add('active');    /* show new face */
       }});
     }});
+
+/* ---------- new helpers ---------- */
+fillShowTimes();
+wireFaceTabs();
+
 
 }});
 </script>
@@ -1572,8 +1626,8 @@ def build_html(shows: List[dict],
 
             faces.append(
                 f'<div class="face" data-face="{face_id}">'
-                f'<div class="cinema-logo" style="margin-bottom:.4rem;">{cin_name[:2].upper()}</div>'
-                f'<div style="font-size:1.1rem;font-weight:600;">{label}</div>'
+                f'  <div class="cinema-logo">{cin_name[:2].upper()}</div>'
+                f'  <div class="timebox"></div>'              # ← inject here later
                 f'</div>'
             )
 
@@ -1596,12 +1650,26 @@ def build_html(shows: List[dict],
     # escape any stray “{ }” that may appear inside movie titles etc.
     cards_html = "\n    ".join(cards)
 
+
+    # -------- collect show-times for all cards (only for *today*) ----------
+    show_times_map: dict[str, dict[str, list[str]]] = {}
+    for cin_slug, cin_name in FAV_CINEMAS:
+        code = cin_name[:2].upper()
+        for slug, entry in cinema_showtimes.get(cin_slug, {}).items():
+            day = entry.get("days", {}).get(date, {})
+            times = day.get("showtimes", [])
+            if times:
+                show_times_map.setdefault(slug, {})[code] = times
+
+    show_times_json = json.dumps(show_times_map, separators=(',', ':'))
+
     return HTML_TMPL.format(
         date=date,
         css=MOBILE_CSS,
         cards=cards_html,
         now=now,
         formatted_date=formatted_date,
+        show_times=show_times_json          # ← NEW
     )
 
 
