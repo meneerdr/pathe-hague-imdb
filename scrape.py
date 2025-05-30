@@ -1179,7 +1179,33 @@ def build_html(shows: List[dict],
     query_date     = dt.datetime.strptime(date, "%Y-%m-%d").date()
     formatted_date = query_date.strftime("%B %-d")
 
+    # ─── helper: first show-time string for a given day ────────────────
+    def _first_showtime_str(day_dict: dict) -> str:
+        """
+        Accepts the single-day dict from /api/cinema/{slug}/shows
+        and returns e.g. "15:00" or "" when nothing found.
 
+        Handles both:
+        • LEGACY →  "times": ["14:30","17:15",…]
+        • CURRENT → "times": [
+                              {"time":"2025-05-30 15:00:00", ...},
+                              {"time":"2025-05-30 18:00:00", ...}
+                             ]
+        """
+        raw = day_dict.get("times") or day_dict.get("showtimes")
+        if not raw:
+            return ""
+
+        # ① simple list of strings ─────────────────────────────
+        if isinstance(raw, list) and raw and isinstance(raw[0], str):
+            return raw[0][:5]                     # "14:30"
+
+        # ② list of objects with "time"/"start" ────────────────
+        if isinstance(raw, list) and isinstance(raw[0], dict):
+            ts = raw[0].get("time") or raw[0].get("start", "")
+            return ts[-8:-3] if ts else ""        # "... 15:00:00" → "15:00"
+
+        return ""
 
     cards: List[str] = []
     for s in shows:
@@ -1516,14 +1542,15 @@ def build_html(shows: List[dict],
             if slug not in cinemas.get(cin_slug, set()):
                 continue
             face_id += 1
-            times_today = (
+            day_entry = (
                 cinema_showtimes.get(cin_slug, {})
                                 .get(slug, {})
                                 .get("days", {})
-                                .get(date, {})
-                                .get("times", [])
+                                .get(date, {})          # ← single-day dict
             )
-            label = times_today[0][:5] if times_today else '&nbsp;'
+
+            label = _first_showtime_str(day_entry) or '&nbsp;'
+
             faces.append(
                 f'<div class="face" data-face="{face_id}">'
                 f'<div class="cinema-logo" style="margin-bottom:.4rem;">{cin_name[:2].upper()}</div>'
