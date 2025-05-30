@@ -139,15 +139,53 @@ def fetch_cinema_slugs(cinema_slug: str, date: str) -> Set[str]:
 
 def fetch_cinema_showtimes_data(cinema_slug: str) -> dict[str, dict]:
     """
-    Returns full { slug: { days: { 'YYYY-MM-DD': {...}, … }, … } } 
-    for each movie in that cinema.
+    Return a mapping that *does* contain showtimes:
+
+        { "<film-slug>": {
+              "days": {
+                  "YYYY-MM-DD": {
+                      "showtimes": ["HH:MM", "HH:MM", …],
+                      ...           # other keys from the original payload
+                  },
+                  ...
+              },
+              ...                   # untouched keys (bookable, tags, etc.)
+        }}
+
+    It first fetches the aggregate /cinema/…/shows payload and then,
+    **only for the film/date combinations we care about**, calls the
+    per-film showtimes endpoint once to inject the real times.
     """
     url = CINEMA_URL_TMPL.format(slug=cinema_slug)
     LOG.info("🔗 fetching full showtimes for cinema '%s' …", cinema_slug)
-    data = get_json(url, params={"language":"nl"})
-    shows_obj = data.get("shows", {}) or {}
-    LOG.info("· got %d entries for %s", len(shows_obj), cinema_slug)
+    root = get_json(url, params={"language": "nl"}) or {}
+    shows_obj = root.get("shows", {}) or {}
+
+    # figure out which date(s) matter for this run
+    today = dt.date.today().isoformat()
+
+    for film_slug, film_data in shows_obj.items():
+        days_obj = film_data.get("days") or {}
+        for day, day_info in days_obj.items():
+            # we only need showtimes for 'today' (the date passed to build_html)
+            if day != today:
+                continue
+
+            # call the per-film endpoint
+            st_url = (
+                f"https://www.pathe.nl/api/show/{film_slug}"
+                f"/showtimes/{cinema_slug}/{day}"
+            )
+            try:
+                arr = get_json(st_url, params={"language": "nl"}, timeout=10)
+                times = [itm["time"][-8:-3] for itm in arr if "time" in itm]
+                day_info["showtimes"] = times        # inject for later use
+            except Exception as exc:
+                LOG.debug("showtimes lookup failed %s – %s", st_url, exc)
+
+    LOG.info("· got %d entries (with showtimes) for %s", len(shows_obj), cinema_slug)
     return shows_obj
+
 
 def fetch_zone_shows() -> dict:
     """ Fetch shows from the Den Haag zone to retrieve kids data and other info """
@@ -1181,31 +1219,12 @@ def build_html(shows: List[dict],
 
     # ─── helper: first show-time string for a given day ────────────────
     def _first_showtime_str(day_dict: dict) -> str:
-        """
-        Accepts the single-day dict from /api/cinema/{slug}/shows
-        and returns e.g. "15:00" or "" when nothing found.
-
-        Handles both:
-        • LEGACY →  "times": ["14:30","17:15",…]
-        • CURRENT → "times": [
-                              {"time":"2025-05-30 15:00:00", ...},
-                              {"time":"2025-05-30 18:00:00", ...}
-                             ]
-        """
-        raw = day_dict.get("times") or day_dict.get("showtimes")
-        if not raw:
+        """Return 'HH:MM' of the first showtime, or '' if none."""
+        try:
+            t = day_dict.get("times", [])[0]       # '2025-05-30 15:00:00'
+            return t[11:16]                        # slice HH:MM
+        except Exception:
             return ""
-
-        # ① simple list of strings ─────────────────────────────
-        if isinstance(raw, list) and raw and isinstance(raw[0], str):
-            return raw[0][:5]                     # "14:30"
-
-        # ② list of objects with "time"/"start" ────────────────
-        if isinstance(raw, list) and isinstance(raw[0], dict):
-            ts = raw[0].get("time") or raw[0].get("start", "")
-            return ts[-8:-3] if ts else ""        # "... 15:00:00" → "15:00"
-
-        return ""
 
     cards: List[str] = []
     for s in shows:
@@ -1542,14 +1561,14 @@ def build_html(shows: List[dict],
             if slug not in cinemas.get(cin_slug, set()):
                 continue
             face_id += 1
-            day_entry = (
+            day_dict = (
                 cinema_showtimes.get(cin_slug, {})
                                 .get(slug, {})
                                 .get("days", {})
-                                .get(date, {})          # ← single-day dict
+                                .get(date, {})            # ← entire day entry (may be {})
             )
 
-            label = _first_showtime_str(day_entry) or '&nbsp;'
+            label = _first_showtime_str(day_dict) or '&nbsp;'
 
             faces.append(
                 f'<div class="face" data-face="{face_id}">'
