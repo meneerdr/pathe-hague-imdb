@@ -888,13 +888,22 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   transition:bottom .25s;
 }
 #snackbar.visible{ bottom:1.2rem; }
-#snackbar button{background:none;border:none;color:#4ea3ff;font-weight:600}
 
-/* Prevent iOS long-press text-selection / callout on cards */
-.card, .card *{
-  -webkit-user-select: none;   /* Safari / old WebKit */
-  user-select: none;
-  -webkit-touch-callout: none; /* iOS context menu */
+/* Snackbar action button — make it match the surrounding text */
+#snackbar button{
+  background:none;
+  border:none;
+  color:#4ea3ff;
+  font-weight:600;
+
+  /* NEW */
+  font-size:inherit;        /* or simply: font: inherit; */
+  line-height:inherit;      /* keeps vertical rhythm identical */
+
+  /* optional niceties */
+  padding:0;
+  cursor:pointer;
+  -webkit-appearance:none;  /* nuke iOS default bevel */
 }
 
 """
