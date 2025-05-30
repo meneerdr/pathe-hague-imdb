@@ -659,6 +659,13 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .card-no-image{width:100%;padding-top:150%;background:#eee;display:flex;align-items:center;justify-content:center;color:#666;font-size:.8rem}
 .card-body{padding:.5rem}
 .card-title{font-size:1rem;line-height:1.2;margin:0}
+
+/* hide poster image & title on any alt-face */
+.card.alt-face > a > img,
+.card.alt-face .card-title {
+  display: none;
+}
+
 .card-date{font-size:.85rem;margin:.25rem 0}
 
 /* Ratings Inline (logos aligned above the ratings) */
@@ -991,6 +998,37 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   margin-bottom: 0;
 }
 
+/* ─── face 1: stack each cinema name above its showtimes ───────────────── */
+.faces .face[data-face="1"] .cinema-block {
+  display: flex;
+  flex-direction: column;
+  gap: .05rem;             /* space between the name and its row of buttons */
+  margin-bottom: .1rem;  /* space between each cinema block */
+}
+
+/* breathing room above each cinema name */
+.faces .face[data-face="1"] .cinema-block .cinema-logo {
+  margin-top: 1rem;
+}
+
+/* only on face 1: 3 equal columns, tight gaps */
+.faces .face[data-face="1"] .buttons-line {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .2rem;
+  /* no need for justify-items:center—buttons will each fill their column */
+}
+
+/* only on face 1: make every pill fill its grid‐cell uniformly */
+.faces .face[data-face="1"] .next-showtimes-button {
+  width: 100%;
+  box-sizing: border-box;       /* include padding in that width */
+  padding: 1px 3px;             /* your tight padding */
+  text-align: center;           /* center the hh:mm text */
+  font-size: .8rem;
+  font-variant-numeric: tabular-nums; /* ensure digits line up */
+}
+
 
 """
 
@@ -1046,16 +1084,19 @@ function fillShowTimes() {{
 
     card.querySelectorAll('.face[data-face]:not([data-face="0"])')
         .forEach(face => {{
-          const logoEl = face.querySelector('.cinema-logo');
-          const code   = logoEl.dataset.code || logoEl.textContent.trim();
-          const box  = face.querySelector('.buttons-line');
+          // loop *each* cinema‐block inside this single face
+          face.querySelectorAll('.cinema-block').forEach(block => {{
+            const logoEl = block.querySelector('.cinema-logo');
+            const code   = logoEl.dataset.code || logoEl.textContent.trim();
+            const box    = block.querySelector('.buttons-line');
 
-          if (timesByCx[code]?.length) {{
-            box.innerHTML = timesByCx[code]
-              .map(t => `<span class="next-showtimes-button">${{t}}</span>`).join('');
-          }} else {{
-            box.textContent = '–';
-          }}
+            if (timesByCx[code]?.length) {{
+              box.innerHTML = timesByCx[code]
+                .map(t => `<span class="next-showtimes-button">${{t}}</span>`).join('');
+            }} else {{
+              box.textContent = '–';
+            }}
+          }});
         }});
   }});
 }}
@@ -1069,6 +1110,10 @@ function wireFaceTabs() {{
           logo.addEventListener('click', () => {{
             faces.forEach(f => f.classList.remove('active'));
             faces[idx + 1].classList.add('active');   // +1 skips the primary face
+
+            if (idx+1 > 0) card.classList.add('alt-face');
+                else card.classList.remove('alt-face');
+
           }});
         }});
 
@@ -1263,6 +1308,10 @@ document.addEventListener('DOMContentLoaded', () => {{
             : (idx - 1 + faces.length) % faces.length;
           faces[idx].classList.add('active');
         }}
+
+          // ← NEW: hide poster/title on any face ≠ 0
+          if (idx > 0)  card.classList.add('alt-face');
+          else          card.classList.remove('alt-face');
 
         card.releasePointerCapture(e.pointerId);
       }});
@@ -1640,9 +1689,9 @@ def build_html(shows: List[dict],
         if zone_next24 == 0 and not bookable and not s.get("isComingSoon"):
             tag_keys.append("future")
 
-        # ---------- swipe-faces (main + one per playing cinema) ----------
+        # ---------- swipe-faces (main + one aggregated showtimes face) ----------
         faces   = []
-        face_id = 0            # first face
+        face_id = 0
 
         # ① MAIN face = the classic card body
         faces.append(
@@ -1651,29 +1700,30 @@ def build_html(shows: List[dict],
             f'</div>'
         )
 
-        # ② One extra face per cinema that really shows the film today
+        # ② Single extra face that shows *all* cinemas at once
+        face_id += 1
+        blocks = []
         for cin_slug, cin_name in FAV_CINEMAS:
+            # only show those cinemas where the film actually plays today
             if slug not in cinemas.get(cin_slug, set()):
                 continue
-            face_id += 1
-            day_dict = (
-                cinema_showtimes.get(cin_slug, {})
-                                .get(slug, {})
-                                .get("days", {})
-                                .get(date, {})            # ← entire day entry (may be {})
-            )
-
-            label = _first_showtime_str(day_dict) or '&nbsp;'
-
-            faces.append(
-                f'<div class="face" data-face="{face_id}">'
-                f'  <div class="cinema-logo" data-code="{cin_name[:2].upper()}">'
-                f'{escape(cin_name)}</div>'
-                f'  <div class="buttons-line"></div>'         # ← now re-use your badge bar
+            code = cin_name[:2].upper()
+            blocks.append(
+                f'<div class="cinema-block">'
+                f'  <span class="cinema-logo" data-code="{code}">'
+                f'{escape(cin_name)}</span>'
+                f'  <div class="buttons-line"></div>'
                 f'</div>'
             )
 
-        faces_html = '<div class="faces">' + ''.join(faces) + '</div>'
+        faces.append(
+            f'<div class="face" data-face="{face_id}">'
+            + "".join(blocks) +
+            "</div>"
+        )
+
+        faces_html = '<div class="faces">' + "".join(faces) + '</div>'
+
 
         # ---------- final card ----------
         hidden_cls = " hidden" if "future" in tag_keys else ""
