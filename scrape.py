@@ -660,9 +660,10 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .card-body{padding:.5rem}
 .card-title{font-size:1rem;line-height:1.2;margin:0}
 
-/* hide poster image & title on any alt-face */
-.card.alt-face > a > img,
-.card.alt-face .card-title {
+/* hide poster image & title on any alt-face 
+/* .card.alt-face > a > img, */
+/* .card.alt-face .card-title { */
+.card.alt-face > a > img {
   display: none;
 }
 
@@ -735,7 +736,6 @@ h1{font-size:1.5rem;margin:0 0 1rem}
  .faces .cinema-logo {
    margin-top: .3rem;
  }
-
  /* any cinema‐logo in face 1,2,3… */
 .faces .face:not([data-face="0"]) .cinema-logo {
   background: #555;
@@ -1008,7 +1008,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 
 /* breathing room above each cinema name */
 .faces .face[data-face="1"] .cinema-block .cinema-logo {
-  margin-top: 1rem;
+  margin-top: 0.8rem;
 }
 
 /* only on face 1: 3 equal columns, tight gaps */
