@@ -633,7 +633,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   text-decoration:none;
   color:inherit;
   background:#fff;
-
+  touch-action: pan-y;
   /* base shadow (visible everywhere) */
   box-shadow:0 1px 4px #0003;
   transition:transform .15s,box-shadow .15s;
@@ -930,7 +930,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 @media(prefers-color-scheme:dark){
   html,body{ background:#000; color:#e0e0e0; }
   .card { background:#111; border-color:#222; }
-  .ratings-inline, .theaters-inline { color:#ccc; touch-action: pan-y; }
+  .ratings-inline, .theaters-inline { color:#ccc; }
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
 }
 
