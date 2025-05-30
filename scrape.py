@@ -1195,27 +1195,42 @@ document.addEventListener('DOMContentLoaded', () => {{
     }});
 
   /* ─────────────────── long-press detection (robust) ─────────────────── */
+  const LONG = 1000;                     /* ms – press length for “watched” */
 
-    cards.forEach(card => {{
-      let timer;
-      const LONG = 1000;
+  cards.forEach(card => {{               /* ← doubled braces */
+    let timer, startX, startY;
 
-      function clearPress() {{
-        clearTimeout(timer);
-        card.classList.remove('pressing');
-      }}
+    // helper to clear the hold state
+    const cancelPress = () => {{
+      clearTimeout(timer);
+      card.classList.remove('pressing');
+    }};
 
-      card.addEventListener('pointerdown', e => {{
-        timer = setTimeout(() => {{
-          card.classList.add('pressing');  // shrink only on *hold*
-          toggleWatch(card);               // your hide/unhide
-        }}, LONG);
-      }});
+    card.addEventListener('pointerdown', e => {{
+      startX = e.clientX;
+      startY = e.clientY;
+      // start the 1 s hold timer
+      timer = setTimeout(() => {{
+        card.classList.add('pressing');  // apply your shrink CSS
+        toggleWatch(card);                // then hide/unhide
+      }}, LONG);
 
-      card.addEventListener('pointerup',   clearPress);
-      card.addEventListener('pointerleave',clearPress);
-      card.addEventListener('pointercancel',clearPress);
+      card.addEventListener('contextmenu', ev => ev.preventDefault());
     }});
+
+    // any of these should cancel the hold
+    card.addEventListener('pointerup',     cancelPress);
+    card.addEventListener('pointerleave',  cancelPress);
+    card.addEventListener('pointercancel', cancelPress);
+
+    // if the finger moves too much, it’s a swipe, not a hold
+    card.addEventListener('pointermove', e => {{
+      if (Math.abs(e.clientX - startX) > 10 ||
+          Math.abs(e.clientY - startY) > 10) {{
+        cancelPress();
+      }}
+    }});
+  }});                                    /* ← doubled braces */
 
 
     /* cancel helper ---------------------------------------------------- */
