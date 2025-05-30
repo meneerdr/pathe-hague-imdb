@@ -1231,38 +1231,43 @@ document.addEventListener('DOMContentLoaded', () => {{
     navigator.storage.persist();
   }}
 
-
-  /* ─────────────────── swipe to flip cinema faces ─────────────────── */
+    /* ─────────────────── swipe to flip cinema faces ─────────────────── */
     /* inside the existing DOMContentLoaded handler — braces doubled! */
     cards.forEach(card => {{
       const faces = [...card.querySelectorAll('.face')];
       if (faces.length <= 1) return;           /* nothing to swipe */
 
-      let idx = 0;                             /* start on the info face */
-
-      /* relaxed left/right swipe detector (pointer events) */
+      let idx = 0;                              /* which face is showing */
       let x0, y0;
-      const SWIPE_DIST = 10;                   /* px – more forgiving */
-      const MAX_VERTICAL = 300;
+      const SWIPE_DIST  = 10;                   /* horizontal threshold */
+      const MAX_VERTICAL = 300;                 /* you already had this */
+
       card.addEventListener('pointerdown', e => {{ 
         x0 = e.clientX;
         y0 = e.clientY;
+        card.setPointerCapture(e.pointerId);     /* ← ① capture the pointer */
       }});
-      card.addEventListener('pointerup',   e => {{
+
+      card.addEventListener('pointermove', e => {{ /* ← ② detect on move */
         const dx = e.clientX - x0;
         const dy = e.clientY - y0;
-        /* trigger only if horizontal move is dominant and long enough */
         if (Math.abs(dx) < SWIPE_DIST || Math.abs(dy) > MAX_VERTICAL) return;
 
-        faces[idx].classList.remove('active'); /* hide current face */
+        faces[idx].classList.remove('active');
+        idx = (dx < 0)
+            ? (idx + 1) % faces.length
+            : (idx - 1 + faces.length) % faces.length;
+        faces[idx].classList.add('active');
 
-        /* left → next, right → previous, wrap around  */
-        idx = (dx < 0) ? (idx + 1) % faces.length
-                       : (idx - 1 + faces.length) % faces.length;
-
-        faces[idx].classList.add('active');    /* show new face */
+        /* reset so you only flip once per drag */
+        x0 = e.clientX;
+        y0 = e.clientY;
       }});
-    }});
+
+      card.addEventListener('pointerup', e => {{   /* ← ③ release capture */
+        card.releasePointerCapture(e.pointerId);
+      }});
+    }});  
 
 /* ---------- new helpers ---------- */
 fillShowTimes();
