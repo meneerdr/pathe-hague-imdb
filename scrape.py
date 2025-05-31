@@ -1051,7 +1051,7 @@ HTML_TMPL = """<!doctype html>
   <!-- Status bar style: default / black / black-translucent -->
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- App title shown on Home Screen (if different from <title>) -->
-  <meta name="apple-mobile-web-app-title" content="🎬 Den Haag">
+  <meta name="apple-mobile-web-app-title" content="Pathé">
 
   <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1064,12 +1064,13 @@ HTML_TMPL = """<!doctype html>
   <style>{css}</style>
 </head>
 <body>
-  
+
     <h1>
       <img
         src="logos/apple-touch-icon.png"
         alt="Pathé"
-        style="width:1em; height:auto; vertical-align:middle; margin-right:0.25em;"
+        style="width:1em;height:auto;vertical-align:middle;margin-right:.25em;"
+        id="refresh"
       >
       Pathé Den Haag · {formatted_date}
     </h1>
@@ -1152,6 +1153,10 @@ document.addEventListener('DOMContentLoaded', () => {{
   const chips    = [...document.querySelectorAll('.chip')];
   const cards    = [...document.querySelectorAll('.card')];
   const snackbar = document.getElementById('snackbar');
+
+  /* pull-to-refresh replacement — manual button */
+  document.getElementById('refresh')
+    ?.addEventListener('click', () => location.reload());
 
   /* ─────────────────── watched <Set> in localStorage ─────────────────── */
   const KEY = 'watchedSlugs-v1';
