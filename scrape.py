@@ -984,26 +984,38 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   -webkit-touch-callout: none; /* iOS context menu */
 }
 
-/* ─── tiny iOS-style page dots (top-right) ─────────────────────── */
+/* ─── tiny iOS-style page dots in a pill ────────────────────────── */
 .pager-dots{
   position:absolute;
-  top:.35rem;                      /* tweak until it feels right */
+  top:.35rem;
   right:.4rem;
+
+  /* >>> the new “pill” <<< */
+  padding:.2rem .45rem;              /* space around the dots      */
+  border-radius:9999px;              /* super-rounded ➜ capsule    */
+  background:#0007;                  /* translucent black in light */
+  backdrop-filter:saturate(150%) blur(3px);   /* subtle glassy feel */
+  
   display:flex;
-  gap:.25rem;                      /* space between dots */
+  gap:.3rem;
+  align-items:center;
 }
+
 .pager-dots span{
-  width:.35rem; height:.35rem;
+  width:.33rem; height:.33rem;
   border-radius:50%;
-  background:#bbb;                 /* inactive */
+  background:#ccc;                   /* inactive */
   flex:0 0 auto;
 }
 .pager-dots span.active{
-  background:#000;                 /* active (= current face)   */
+  background:#fff;                   /* active   */
 }
+
+/* dark-mode adjustments */
 @media(prefers-color-scheme:dark){
+  .pager-dots{ background:#fff3; }    /* translucent white pill    */
   .pager-dots span{ background:#666; }
-  .pager-dots span.active{ background:#fff; }
+  .pager-dots span.active{ background:#000; }
 }
 
 /* cinema faces – only one visible at a time */
