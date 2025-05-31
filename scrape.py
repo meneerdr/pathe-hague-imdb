@@ -1689,42 +1689,53 @@ def build_html(shows: List[dict],
         if zone_next24 == 0 and not bookable and not s.get("isComingSoon"):
             tag_keys.append("future")
 
-        # ---------- swipe-faces (main + one aggregated showtimes face) ----------
-        faces   = []
+        # ───── swipe-faces (main + one aggregated showtimes face) ─────
+        faces  = []
         face_id = 0
 
-        # ① MAIN face = the classic card body
+        # ① main face (always there)
         faces.append(
             f'<div class="face active" data-face="{face_id}">'
             f'{ratings_html}{theaters_html}{buttons_line}'
             f'</div>'
         )
 
-        # ② Single extra face that shows *all* cinemas at once
-        if next_showtimes > 0:
-            face_id += 1
-            blocks = []
-            for cin_slug, cin_name in FAV_CINEMAS:
-                # only show those cinemas where the film actually plays today
-                if slug not in cinemas.get(cin_slug, set()):
-                    continue
-                code = cin_name[:2].upper()
-                blocks.append(
-                    f'<div class="cinema-block">'
-                    f'  <a href="{film_url}" target="_blank" style="text-decoration:none;">'
-                    f'<span class="cinema-logo" data-code="{code}">{escape(cin_name)}</span>'
-                    f'  </a>'
-                    f'  <div class="buttons-line"></div>'
-                    f'</div>'
-                )
+        # ② only build face 1 if at least one cinema really has ≥1 showtime on {date}
+        face_id += 1
+        blocks = []
+        for cin_slug, cin_name in FAV_CINEMAS:
+            # look up that cinema’s fetched showtimes for this slug on exactly “date”
+            day_info = (
+                cinema_showtimes
+                .get(cin_slug, {})        # might not exist if cinema never fetched
+                .get(slug, {})            # might not exist if slug never fetched
+                .get("days", {})          # the “days” dictionary
+                .get(date, {})            # the specific day we care about
+            )
+            times = day_info.get("showtimes", [])
+            if not times:
+                # either this film isn’t in that cinema *or* there really are no showtimes
+                continue
 
+            code = cin_name[:2].upper()
+            blocks.append(
+                f'<div class="cinema-block">'
+                f'  <span class="cinema-logo" data-code="{code}">'
+                f'{escape(cin_name)}</span>'
+                f'  <div class="buttons-line"></div>'
+                f'</div>'
+            )
+
+        # only append the “face 1” wrapper if at least one cinema-block was built:
+        if blocks:
             faces.append(
                 f'<div class="face" data-face="{face_id}">'
                 + "".join(blocks) +
                 "</div>"
             )
 
-            faces_html = '<div class="faces">' + "".join(faces) + '</div>'
+        faces_html = '<div class="faces">' + "".join(faces) + '</div>'
+
 
 
         # ---------- final card ----------
