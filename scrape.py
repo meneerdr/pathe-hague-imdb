@@ -668,6 +668,11 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   display: none;
 }
 
+/* title spacing ONLY while a non-primary face is visible */
+.card.alt-face .card-title{
+  margin-top: .55rem;
+}
+
 .card-date{font-size:.85rem;margin:.25rem 0}
 
 /* Ratings Inline (logos aligned above the ratings) */
