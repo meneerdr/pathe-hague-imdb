@@ -723,7 +723,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 .faces .cinema-logo {
   display:inline-block;
   padding:.2rem .1rem;
-  background:#555;
+  background:darkgrey;
   color:#fff;
   font-weight:bold;
   font-size: .85rem;
@@ -1036,7 +1036,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 HTML_TMPL = """<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8">
-  <title>🎬 Pathé Den Haag · {formatted_date}</title>
+  <title>Pathé Den Haag · {formatted_date}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">   <!-- enables iOS dark-mode -->
 
@@ -1064,7 +1064,16 @@ HTML_TMPL = """<!doctype html>
   <style>{css}</style>
 </head>
 <body>
-  <h1>🎬 Pathé Den Haag · {formatted_date}</h1>
+  
+    <h1>
+      <img
+        src="logos/apple-touch-icon.png"
+        alt="Pathé"
+        style="width:1em; height:auto; vertical-align:middle; margin-right:0.25em;"
+      >
+      Pathé Den Haag · {formatted_date}
+    </h1>
+
   <!-- quick-filter chips -->
   <div class="filter-bar">
     <span class="chip" data-tag="all">All</span> 
