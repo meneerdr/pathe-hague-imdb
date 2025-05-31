@@ -637,6 +637,7 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   /* base shadow (visible everywhere) */
   box-shadow:0 1px 4px #0003;
   transition:transform .15s,box-shadow .15s;
+  position: relative;          /* needed for absolute dots */
 }
 
 /* ①  Desktop / trackpad — lift on hover  */
@@ -983,6 +984,28 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   -webkit-touch-callout: none; /* iOS context menu */
 }
 
+/* ─── tiny iOS-style page dots (top-right) ─────────────────────── */
+.pager-dots{
+  position:absolute;
+  top:.35rem;                      /* tweak until it feels right */
+  right:.4rem;
+  display:flex;
+  gap:.25rem;                      /* space between dots */
+}
+.pager-dots span{
+  width:.35rem; height:.35rem;
+  border-radius:50%;
+  background:#bbb;                 /* inactive */
+  flex:0 0 auto;
+}
+.pager-dots span.active{
+  background:#000;                 /* active (= current face)   */
+}
+@media(prefers-color-scheme:dark){
+  .pager-dots span{ background:#666; }
+  .pager-dots span.active{ background:#fff; }
+}
+
 /* cinema faces – only one visible at a time */
 .faces        { position: relative; }
 .face         { display: none; }
@@ -1127,12 +1150,15 @@ function fillShowTimes() {{
 function wireFaceTabs() {{
   document.querySelectorAll('.card').forEach(card => {{
     const faces = [...card.querySelectorAll('.face')];
+    const pagerDots = [...card.querySelectorAll('.pager-dots span')];
 
     card.querySelectorAll('.theaters-inline .cinema-logo')
         .forEach((logo, idx) => {{
           logo.addEventListener('click', () => {{
             faces.forEach(f => f.classList.remove('active'));
+            pagerDots.forEach(d => d.classList.remove('active'));
             faces[idx + 1].classList.add('active');   // +1 skips the primary face
+            pagerDots[idx + 1].classList.add('active');
 
             if (idx+1 > 0) card.classList.add('alt-face');
                 else card.classList.remove('alt-face');
@@ -1309,6 +1335,7 @@ document.addEventListener('DOMContentLoaded', () => {{
     /* inside your DOMContentLoaded handler — note the doubled {{ }} */
     cards.forEach(card => {{
       const faces = [...card.querySelectorAll('.face')];
+      const pagerDots = [...card.querySelectorAll('.pager-dots span')];
       if (faces.length <= 1) return;       /* nothing to swipe */
 
       let idx = 0;                         /* which face is active */
@@ -1334,6 +1361,8 @@ document.addEventListener('DOMContentLoaded', () => {{
             ? (idx + 1) % faces.length
             : (idx - 1 + faces.length) % faces.length;
           faces[idx].classList.add('active');
+          pagerDots.forEach(d => d.classList.remove('active'));
+          pagerDots[idx].classList.add('active');
         }}
 
           // ← NEW: hide poster/title on any face ≠ 0
@@ -1764,6 +1793,13 @@ def build_html(shows: List[dict],
         faces_html = '<div class="faces">' + "".join(faces) + '</div>'
 
 
+        # ---------- page-indicator dots ----------
+        num_faces = len(faces)            # face 0 + any extras
+        dots_html = ""
+        if num_faces > 1:                 # only when there is something to swipe
+            dots = ['<span class="{}"></span>'.format("active" if i == 0 else "")
+                    for i in range(num_faces)]
+            dots_html = '<div class="pager-dots">' + "".join(dots) + '</div>'   
 
         # ---------- final card ----------
         hidden_cls = " hidden" if "future" in tag_keys else ""
@@ -1772,7 +1808,7 @@ def build_html(shows: List[dict],
         cards.append(
             f'<div class="card{hidden_cls}" data-tags="{tags_str}" data-slug="{slug}">'
             f'{img}'
-            f'<div class="card-body">{title_html}{faces_html}</div>'
+            f'<div class="card-body">{title_html}{faces_html}{dots_html}</div>'
             f'</div>'
         )
 
