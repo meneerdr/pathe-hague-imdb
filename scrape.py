@@ -1040,6 +1040,19 @@ HTML_TMPL = """<!doctype html>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">   <!-- enables iOS dark-mode -->
 
+
+ <link rel="apple-touch-icon" sizes="180x180" href="logos/apple-touch-icon.png">
+ <link rel="icon" type="image/png" sizes="32x32" href="logos/favicon-32x32.png">
+ <link rel="icon" type="image/png" sizes="16x16" href="logos/favicon-16x16.png">
+ <link rel="manifest" href="manifest.json">
+
+   <!-- Tell iOS Safari this is a web app -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <!-- Status bar style: default / black / black-translucent -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- App title shown on Home Screen (if different from <title>) -->
+  <meta name="apple-mobile-web-app-title" content="🎬 Den Haag">
+
   <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

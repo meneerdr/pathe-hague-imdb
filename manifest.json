@@ -1,0 +1,28 @@
+{
+  "name": "Pathé Den Haag",
+  "short_name": "Pathé DH",
+  "description": "Pathé Den Haag",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#FFCC00",
+  "icons": [
+    {
+      "src": "logos/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+    /*  You may add other sizes here if you generated them: */
+    /* , {
+      "src": "logos/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logos/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    } */
+  ]
+}
