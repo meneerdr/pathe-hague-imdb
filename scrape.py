@@ -1143,6 +1143,16 @@ h1{
   margin: 0.1rem;                     /* small gap around each pill */
 }
 
+@media (min-width: 600px) {
+  .chip {
+    /* for example, increase padding so total becomes 40px */
+    line-height: 1.2;            /* adjusts the “content” portion if needed */
+    padding: 7px 14px;           /* new padding values */
+    border-width: 2px;           /* stays 2px if you want */
+    /*…now content(≈17.5) + pad(7+7) + border(2+2) ≈ 35.5, tweak until 40px…*/
+  }
+}
+
 /* Active chip: black fill, yellow text */
 .chip.active {
   background: var(--pathe-black);
@@ -1232,7 +1242,6 @@ HTML_TMPL = """<!doctype html>
 <body>
 
     <h1>
-
       Pathé Den Haag · {formatted_date}
     </h1>
 
