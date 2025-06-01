@@ -1011,13 +1011,6 @@ h1 {
   background:#fff;                   /* active   */
 }
 
-/* dark-mode adjustments */
-@media(prefers-color-scheme:dark){
-  .pager-dots{ background:#fff3; }    /* translucent white pill    */
-  .pager-dots span{ background:#666; }
-  .pager-dots span.active{ background:#000; }
-}
-
 /* cinema faces – only one visible at a time */
 .faces        { position: relative; }
 .face         { display: none; }
@@ -1077,17 +1070,7 @@ h1 {
   }
 }
 
-/* ─── 2) Dark‐mode override (applies in both desktop & mobile) ───── */
-@media (prefers-color-scheme: dark) {
-  .filter-bar {
-    background: #000;       /* keep the same bar in dark mode */
-  }
-  h1 {
-    color: var(--pathe-yellow);
-  }
-}
-
-/* ─── 3) Touch / “pointer: coarse” (fixed bottom) ────────────────── */
+/* ─── 2) Touch / “pointer: coarse” (fixed bottom) ────────────────── */
 @media (hover: none) and (pointer: coarse) {
   .filter-bar {
     /* prevent the bar from being dragged by a vertical swipe */
@@ -1135,6 +1118,16 @@ h1 {
   /* push page content up so cards don’t slide under the bottom bar */
   body {
     padding-bottom: var(--h);
+  }
+}
+
+/* ─── 3) Dark‐mode override (applies in both desktop & mobile) ───── */
+@media (prefers-color-scheme: dark) {
+  .filter-bar {
+    background: #000;       /* keep the same bar in dark mode */
+  }
+  h1 {
+    color: var(--pathe-yellow);
   }
 }
 
@@ -1914,9 +1907,9 @@ def build_html(shows: List[dict],
             rating_class = "kids-rating-button" if is_kids else "adult-rating-button"
             buttons.append(f'<span class="{rating_class}">{content_rating}</span>')
 
-        # Show the flag if flag is present (regardless of specialEvent)
+        # Show the flag only if it's neither null nor IMAX nor Dolby Cinema
         flag = s.get("flag")
-        if flag:
+        if flag and flag not in ("IMAX", "Dolby Cinema"):
             buttons.append(f'<span class="event-button">{flag}</span>')
 
         # Premium-format buttons (zone-scoped)
