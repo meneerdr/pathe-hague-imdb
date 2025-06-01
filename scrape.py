@@ -1070,24 +1070,26 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 /* ─── bottom filter-bar on touch screens ───────────────────────────── */
-@media (hover:none) and (pointer:coarse){          /* touch devices only */
+@media (hover:none) and (pointer:coarse){
   .filter-bar{
+    /* existing ↓ */
     position:fixed;
-    left:0; right:0;
     bottom:calc(env(safe-area-inset-bottom) + .25rem);
-
-    /* inner spacing:   top / lr / bottom  */
-    padding:.4rem .6rem calc(.4rem + env(safe-area-inset-bottom));
-
-    backdrop-filter:saturate(140%) blur(10px);     /* nice frosted look */
-    background:#f6f6f7cc;                          /* translucent for light */
-    border-radius:16px;                            /* rounded ends         */
-    margin:0 .5rem;                                /* keep away from sides */
-    box-shadow:0 0 3px #0003;
+    left:0; right:0;
+    margin:0 .5rem;
+    padding:.5rem env(safe-area-inset-left)
+            .5rem env(safe-area-inset-right);
+    display:flex;
+    gap:.5rem;
     overflow-x:auto;
-    scrollbar-width:none;
+    /* NEW ↓↓↓ ------------------------------------------------------- */
+    align-items:center;          /* stop the chips from stretching   */
+    overflow-y:hidden;           /* kill the accidental V-scrollbar  */
+    min-height:3rem;             /* gives the bar a definite height  */
   }
-  .filter-bar::-webkit-scrollbar{display:none;}    /* hide iOS scrollbar */
+
+  /* (optional) hide the tiny horizontal scrollbar chrome */
+  .filter-bar::-webkit-scrollbar{ display:none; }
 }
 
 .chip{
