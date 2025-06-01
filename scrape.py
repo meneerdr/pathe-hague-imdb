@@ -1231,24 +1231,61 @@ body {
   overscroll-behavior: contain;
 }
 
-/* hidden “pull to refresh” bar */
+/* ─── Pull‐to‐Refresh (premium styling) ─────────────────────────── */
 #pull-to-refresh {
   position: fixed;
   top: env(safe-area-inset-top);
   left: 0;
   right: 0;
-  height: 0;
-  background: var(--pathe-yellow);
+  height: 0;                     /* JS will expand this to, say, 50px */
+  background: linear-gradient(
+    to bottom,
+    rgba(251, 189, 10, 0.95),
+    rgba(251, 189, 10, 0.85)
+  );
   color: var(--pathe-black);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 0.9rem;
   font-weight: 600;
   overflow: hidden;
   transition: height 0.2s ease;
   z-index: 50;
-  font-size: 0.9rem;
+
+  /* add a subtle drop‐shadow so it “floats” above the cards */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+  /* round only the bottom corners */
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
+
+/* The spinner SVG */
+#pull-to-refresh .spinner {
+  margin-right: 0.5rem;
+  width: 1rem;
+  height: 1rem;
+  animation: spin 1s linear infinite;
+  fill: var(--pathe-black);
+}
+
+/* keyframes for spinner rotation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* “Pull to refresh” vs “Refreshing…” text */
+#pull-to-refresh .label {
+  white-space: nowrap;
+}
+
+/* When the refresh is complete, fade out smoothly */
+#pull-to-refresh.hide {
+  transition: height 0.2s ease, opacity 0.2s ease;
+  opacity: 0;
+}
+
 
 """
 
@@ -1285,7 +1322,24 @@ HTML_TMPL = """<!doctype html>
   <style>{css}</style>
 </head>
 <body>
-  <div id="pull-to-refresh">↻ Pull to refresh</div>
+
+<!-- Pull‐to‐Refresh bar (insert this just below <body> ) -->
+<div id="pull-to-refresh">
+  <!-- Spinner SVG -->
+  <svg class="spinner" viewBox="0 0 50 50">
+    <circle
+      cx="25" cy="25" r="20"
+      stroke="currentColor"
+      stroke-width="4"
+      stroke-linecap="round"
+      stroke-dasharray="31.4 31.4"
+      fill="none"
+    />
+  </svg>
+  <span class="label pull">Pull to refresh</span>
+  <span class="label refreshing" style="display: none;">Refreshing…</span>
+</div>
+
 <h1>
   <img src="logos/pathe-logo.svg"
        alt="Pathé"
