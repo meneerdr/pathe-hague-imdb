@@ -1447,7 +1447,7 @@ function wireFaceTabs() {{
   window.addEventListener('touchmove', e => {{
     if (!__ptrStartY) return;
     __ptrDist = e.touches[0].clientY - __ptrStartY;
-    if (__ptrDist > 0) {{
+    if (__ptrDist > __ptrOffset) {{
       e.preventDefault();  // prevent native bounce
       // subtract the “dead zone” before growing
       const grow = __ptrDist - __ptrOffset;
