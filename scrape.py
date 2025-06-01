@@ -1073,51 +1073,58 @@ h1 {
 /* ─── 2) Touch / “pointer: coarse” (fixed bottom) ────────────────── */
 @media (hover: none) and (pointer: coarse) {
   .filter-bar {
-    /* prevent the bar from being dragged by a vertical swipe */
+    /* stop vertical drag from yanking the bar itself */
     overscroll-behavior: contain;
-    /* only allow horizontal “pan” on the pills, not vertical */
+    /* allow only sideways swipes inside the bar */
     touch-action: pan-x;
+
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    z-index: 999;                       /* stay above cards */
-    display: flex;                      /* ← must remain flex on touch */
+    bottom: env(safe-area-inset-bottom);
+    z-index: 999;                         /* stay above cards */
+
+    display: flex;                        /* pills in one row */
     align-items: center;
-    gap: .1rem;                         /* chip‐to‐chip gap */
+    gap: .1rem;                           /* chip-to-chip gap */
+
+    /* 🔑 horizontal scrolling — the two lines we re-add */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
     scroll-snap-type: x proximity;
 
-    /* interior spacing for safe‐area at the bottom */
-    --pad-top:  .35rem;                 /* space *above* the pills */
-    --pad-bot:  .12rem;                 /* space *below* the pills */
+    /* interior spacing for the yellow bar */
+    --pad-top:  .35rem;                   /* space *above* pills */
+    --pad-bot:  .12rem;                   /* space *below* pills */
 
     padding:
-      var(--pad-top)                    /* top */
-      env(safe-area-inset-left)         /* left */
-      calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
-      env(safe-area-inset-right);       /* right */
+      var(--pad-top)                      /* top  */
+      env(safe-area-inset-left)           /* left */
+      calc(var(--pad-bot) + env(safe-area-inset-bottom))  /* bottom */
+      env(safe-area-inset-right);         /* right */
 
-    background: #fbbd0a;                /* Pathe‐yellow background */
-    backdrop-filter: none;              /* solid color, no blur */
-    box-shadow: 0 -1px 4px #0003;       /* subtle top edge shadow */
+    background: #fbbd0a;                  /* Pathé yellow */
+    backdrop-filter: none;                /* solid colour */
+    box-shadow: 0 -1px 4px #0003;         /* subtle top edge */
 
-    /* recalc total height so body { padding-bottom: var(--h) } works */
-    --row-h: 2.5rem;                    /* approximate “chip” height */
-    --h: calc(
-      var(--row-h)
-      + var(--pad-top)
-      + var(--pad-bot)
-      + env(safe-area-inset-bottom)
-    );
-
-    /* keep this layer separate so it never “loses” its children */
+    /* keep the bar on its own compositing layer */
     transform: translateZ(0);
     will-change: transform;
+
+    /* recalc total height so body { padding-bottom: … } works */
+    --row-h: 2.5rem;                      /* pill height */
+    --h: calc(
+      var(--row-h) +
+      var(--pad-top) +
+      var(--pad-bot) +
+      env(safe-area-inset-bottom)
+    );
   }
 
-  /* push page content up so cards don’t slide under the bottom bar */
+  /* push page content up so cards don’t slide under the bar */
   body {
-    padding-bottom: var(--h);
+    padding-bottom: calc(var(--row-h) + var(--pad-top));
   }
 }
 
@@ -1127,7 +1134,7 @@ h1 {
     background: #000;       /* keep the same bar in dark mode */
   }
   h1 {
-    color: var(--pathe-yellow);
+    body { padding-bottom: calc(var(--row-h) + var(--pad-top)); }
   }
 }
 
