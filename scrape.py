@@ -613,7 +613,8 @@ def cls_mc(r: Optional[str]) -> str:
 MOBILE_CSS = """
 html{ -webkit-text-size-adjust:100%; }
 body{
-  margin:1rem;
+  margin:0 1rem 1rem;                  /* remove the 1 rem top margin */
+  padding-top:env(safe-area-inset-top);
   font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   /* default (light) colours */
   background:#f6f6f7;
@@ -622,10 +623,10 @@ body{
   /* 🆕 let iOS/Safari know that dark-mode variants are present */
   color-scheme: light dark;
 }
+
 h1{
-  font-size:1.5rem;
-  margin:0 0 1rem;
-  padding-top:calc(.25rem + env(safe-area-inset-top));   /* NEW */
+  font-size:1.5rem; margin:0 0 1rem;
+  padding-top:.25rem;                  /* small, constant breathing room */
 }
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
@@ -1077,49 +1078,45 @@ h1{
 }
 
 
-/* ─── bottom filter-bar – touch devices only ───────────────────── */
+/* ─── bottom filter-bar ───────────────────────────────────────────── */
 @media (hover:none) and (pointer:coarse){
 
+  /* ❶  the bar itself */
   .filter-bar{
-    position:fixed;
-    left:0; right:0; bottom:0;
-    /* ✂️  🔥 delete the explicit height line  */
+    position:fixed; left:0; right:0; bottom:0;
+    z-index:999;                                 /* stay above cards */
 
-    /* visual + layout */
-    display:flex;
-    align-items:center;
-    gap:.5rem;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
+    display:flex; align-items:center; gap:.5rem;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
 
-    /* reserve room for the home-indicator */
-    padding:.25rem env(safe-area-inset-left)
-            calc(.25rem + env(safe-area-inset-bottom))
+    /* let the content decide the height – paddings only */
+    padding:.35rem env(safe-area-inset-left)
+            calc(.35rem + env(safe-area-inset-bottom))
             env(safe-area-inset-right);
 
     background:rgba(246,246,247,.95);
     backdrop-filter:blur(10px) saturate(160%);
-    box-shadow:0 -1px 4px #0002;
+    box-shadow:0 -1px 4px #0003;
     scroll-snap-type:x proximity;
+
+    /* expose the actual height (needed below) */
+    --h: calc(  /* chip row ≈ 2.15 rem */ 2.15rem
+                + .7rem                     /* vertical paddings */
+                + env(safe-area-inset-bottom) );
   }
 
-  /* cards can now scroll under a bar whose height is purely its padding */
-  body{
-    /* 2.5 rem ≈ one chip row; adjust if you ever change chip size        */
-    padding-bottom:calc(2.5rem + env(safe-area-inset-bottom));
-  }
+  /* ❷  keep cards clear of the bar */
+  body{ padding-bottom:var(--h); }
 
-  /* chips never shrink / wrap ----------------------------------------- */
-  .chip{
-    flex:0 0 auto;
-    white-space:nowrap;
-    scroll-snap-align:start;
-  }
+  /* ❸  chips: never wrap, snap when you swipe */
+  .chip{ flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; }
 
+  /* ❹  dark-mode tint */
   @media (prefers-color-scheme:dark){
     .filter-bar{ background:rgba(0,0,0,.80); }
   }
 }
+
 
 
 """
