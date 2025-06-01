@@ -1265,8 +1265,7 @@ HTML_TMPL = """<!doctype html>
 <h1>
   <img src="logos/pathe-logo.svg"
        alt="Pathé"
-       class="h1-icon"
-       id="refresh">
+       class="h1-icon">
   {formatted_date}, {build_time}
 </h1>
 
