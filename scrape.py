@@ -1069,6 +1069,34 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-variant-numeric: tabular-nums; /* ensure digits line up */
 }
 
+/* ─── bottom filter-bar on touch screens ───────────────────────────── */
+@media (hover:none) and (pointer:coarse){
+  .filter-bar{
+    position:fixed;                /* always visible */
+    bottom:0; left:0; right:0;
+    top:auto;                      /* undo the old sticky-top */
+    z-index:35;                    /* above cards & snackbar */
+
+    /* iOS safe-area & a bit of breathing room */
+    padding:.5rem env(safe-area-inset-left)
+            calc(.75rem + env(safe-area-inset-bottom))
+            env(safe-area-inset-right);
+
+    /* raise the visual hierarchy & fight translucency */
+    background:rgba(246,246,247,.95);     /* same colour, slight opacity */
+    backdrop-filter:blur(10px);           /* iOS  ≥15 “frosted glass”   */
+    box-shadow:0 -1px 4px #0003;
+  }
+
+  /* give the page enough room so the bar doesn’t cover content */
+  body{ padding-bottom:calc(3.5rem + env(safe-area-inset-bottom)); }
+}
+
+/* dark-mode variant (same @media) */
+@media (hover:none) and (pointer:coarse) and (prefers-color-scheme:dark){
+  .filter-bar{ background:rgba(0,0,0,.75); }
+}
+
 
 """
 
