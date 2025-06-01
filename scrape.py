@@ -1088,8 +1088,6 @@ h1 {
     display: flex;                      /* ← must remain flex on touch */
     align-items: center;
     gap: .1rem;                         /* chip‐to‐chip gap */
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
 
     /* interior spacing for safe‐area at the bottom */
@@ -1116,8 +1114,18 @@ h1 {
     );
 
     /* keep this layer separate so it never “loses” its children */
-    transform: translate3d(0,0,0);
+    transform: translateZ(0);
     will-change: transform;
+  }
+
+ /* wrap all the pills inside a scrollable child */
+  .filter-bar .scroll-wrapper {
+    flex: 1;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    gap: .1rem;
+    padding: 0 .6rem; /* optional left/right padding */
   }
 
   /* push page content up so cards don’t slide under the bottom bar */
