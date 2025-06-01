@@ -755,15 +755,17 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 /* Quick-filter toolbar */
-.filter-bar{
-  position:sticky;   /* ← makes it “float” */
-  top:0;             /* ← stick to the very top of the viewport */
-  z-index:20;        /* ← stay above the cards */
-  display:flex;
-  gap:.5rem;
-  overflow-x:auto;
-  padding:.5rem 0 .75rem;
-  background:#f6f6f7;          /* light-mode background */
+@media (hover:hover) and (pointer:fine){
+    .filter-bar{
+      position:sticky;   /* ← makes it “float” */
+      top:0;             /* ← stick to the very top of the viewport */
+      z-index:20;        /* ← stay above the cards */
+      display:flex;
+      gap:.5rem;
+      overflow-x:auto;
+      padding:.5rem 0 .75rem;
+      background:#f6f6f7;          /* light-mode background */
+    }
 }
 
 /* keep the dark-mode backdrop in sync */
@@ -1068,53 +1070,52 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-size: .8rem;
   font-variant-numeric: tabular-nums; /* ensure digits line up */
 }
-/* ─── bottom filter-bar – touch devices only ────────────────────────── */
+
+
+/* ─── bottom filter-bar – touch devices only ─────────────────────── */
 @media (hover:none) and (pointer:coarse){
 
-  /* 1. fixed bar */
   .filter-bar{
+    /* layout -------------------------------------------------------- */
     position:fixed;
-    left:0; right:0;        /* full width */
-    bottom:0;               /* sit on the very edge */
+    left:0; right:0; bottom:0;   /* top is deliberately NOT set   */
+    height:calc(44px + env(safe-area-inset-bottom));
     z-index:35;
 
-    /* visual style */
     display:flex;
+    align-items:center;          /* stop chips stretching */
     gap:.5rem;
     overflow-x:auto;
-    padding:.5rem env(safe-area-inset-left)
-            calc(.75rem + env(safe-area-inset-bottom))
+    -webkit-overflow-scrolling:touch;    /* smooth swipe */
+
+    /* visuals ------------------------------------------------------- */
+    padding:.25rem env(safe-area-inset-left)
+            calc(.25rem + env(safe-area-inset-bottom))
             env(safe-area-inset-right);
-
-    background:#f6f6f7;                 /* SAME colour as <body> */
-    box-shadow:0 -1px 4px #0002;        /* faint top edge */
-    border-top:1px solid #ddd;          /* crisp separator */
-
-    /* never let content show through */
-    backdrop-filter:none;               /* kill translucency */
+    background:rgba(246,246,247,.95);    /* opaque enough – no see-through */
+    backdrop-filter:blur(10px) saturate(160%);
+    box-shadow:0 -1px 4px #0002;
+    scroll-snap-type:x proximity;
   }
 
-  /* 2. make sure cards can scroll *under* the bar without being hidden */
-  :root{
-    --filterbar-height: calc(3.5rem + env(safe-area-inset-bottom));
-  }
+  /* space for the bar so cards don’t disappear underneath ---------- */
   body{
-    padding-bottom:var(--filterbar-height);
+    padding-bottom:calc(44px + 1rem + env(safe-area-inset-bottom));
   }
 
-  /* 3. chips – always a single line, snap as you swipe */
+  /* chips ----------------------------------------------------------- */
   .chip{
-    flex:0 0 auto;          /* never shrink */
-    white-space:nowrap;     /* never wrap   */
+    flex:0 0 auto;
+    white-space:nowrap;
     scroll-snap-align:start;
   }
-  .filter-bar{ scroll-snap-type:x proximity; }
 
-  /* 4. dark-mode colour swap */
+  /* dark-mode tweak ------------------------------------------------- */
   @media (prefers-color-scheme:dark){
-    .filter-bar{ background:#000; border-top-color:#222; }
+    .filter-bar{ background:rgba(0,0,0,.75); }
   }
 }
+
 
 
 """
