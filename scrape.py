@@ -1116,7 +1116,7 @@ h1 {
     );
 
     /* keep this layer separate so it never “loses” its children */
-    transform: translateZ(0);
+    transform: translate3d(0,0,0);
     will-change: transform;
   }
 
@@ -1202,7 +1202,7 @@ h1 {
 /* Optional: if you embed a tiny Pathe “bubble” logo inside */
 .chip-logo {
   height: 2.2rem;
-  margin-right: 0.3rem;
+  margin-right: 0.1rem;
   vertical-align: middle;
 }
 
