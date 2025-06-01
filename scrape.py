@@ -1056,29 +1056,28 @@ h1 {
   font-size: .8rem;
   font-variant-numeric: tabular-nums; /* ensure digits line up */
 }
-
-/* ─── Filter bar 1) Desktop / pointer:fine ───────────────────────── */
+/* ─── 1) Desktop / “pointer: fine” (sticky top) ───────────────────── */
 @media (hover: hover) and (pointer: fine) {
   .filter-bar {
     position: sticky;
     top: 0;
-    z-index: 20;          /* stay above the cards */
-    display: flex;
+    z-index: 20;            /* stay above the cards */
+    display: flex;          /* ← must remain flex on desktop */
     gap: .5rem;
     overflow-x: auto;
     padding: .5rem 0 .75rem;
-    background: #f6f6f7;  /* light‐mode background */
+    background: #f6f6f7;    /* light‐mode background */
   }
 }
 
-/* ─── Filter bar 2) Dark-mode override (applies everywhere) ───────── */
+/* ─── 2) Dark‐mode override (applies in both desktop & mobile) ───── */
 @media (prefers-color-scheme: dark) {
   .filter-bar {
-    background: #000;     /* keep the same toolbar in dark */
+    background: #000;       /* keep the same bar in dark mode */
   }
 }
 
-/* ─── Filter bar 3) Touch / pointer:coarse ────────────────────────── */
+/* ─── 3) Touch / “pointer: coarse” (fixed bottom) ────────────────── */
 @media (hover: none) and (pointer: coarse) {
   .filter-bar {
     position: fixed;
@@ -1086,29 +1085,29 @@ h1 {
     right: 0;
     bottom: 0;
     z-index: 999;                       /* stay above cards */
-    display: flex;
+    display: flex;                      /* ← must remain flex on touch */
     align-items: center;
-    gap: .1rem;                         /* chip-to-chip gap */
+    gap: .1rem;                         /* chip‐to‐chip gap */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
 
-    /* interior spacing */
-    --pad-top:  .35rem;                 /* space *above* chips */
-    --pad-bot:  .12rem;                 /* space *below* chips */
+    /* interior spacing for safe‐area at the bottom */
+    --pad-top:  .35rem;                 /* space *above* the pills */
+    --pad-bot:  .12rem;                 /* space *below* the pills */
 
     padding:
-      var(--pad-top)                   /* top */
-      env(safe-area-inset-left)        /* left */
+      var(--pad-top)                    /* top */
+      env(safe-area-inset-left)         /* left */
       calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
-      env(safe-area-inset-right);      /* right */
+      env(safe-area-inset-right);       /* right */
 
-    background: #fbbd0a;                /* Pathe-yellow */
-    backdrop-filter: none;              /* no blur */
-    box-shadow: 0 -1px 4px #0003;       /* subtle top edge */
+    background: #fbbd0a;                /* Pathe‐yellow background */
+    backdrop-filter: none;              /* solid color, no blur */
+    box-shadow: 0 -1px 4px #0003;       /* subtle top edge shadow */
 
-    /* recalculate total height for body padding */
-    --row-h: 2.5rem;                    /* ≈ chip height */
+    /* recalc total height so body { padding-bottom: var(--h) } works */
+    --row-h: 2.5rem;                    /* approximate “chip” height */
     --h: calc(
       var(--row-h)
       + var(--pad-top)
@@ -1116,12 +1115,12 @@ h1 {
       + env(safe-area-inset-bottom)
     );
 
-    /* keep it on its own layer so it never gets clipped on overscroll */
+    /* keep this layer separate so it never “loses” its children */
     transform: translateZ(0);
     will-change: transform;
   }
 
-  /* make room at the bottom so cards don’t slip under the bar */
+  /* push page content up so cards don’t slide under the bottom bar */
   body {
     padding-bottom: var(--h);
   }
