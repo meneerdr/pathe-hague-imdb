@@ -1178,7 +1178,7 @@ h1{
 
 /* Optional: if you embed a tiny Pathe “bubble” logo inside */
 .chip-logo {
-  height: 2rem;
+  height: 1.5rem;
   margin-right: 0.3rem;
   vertical-align: middle;
 }
@@ -1239,7 +1239,7 @@ HTML_TMPL = """<!doctype html>
   <!-- quick-filter chips -->
   <div class="filter-bar">
         <img
-        src="logos/apple-touch-icon.png"
+        src="logos/chip.png"
         alt="Pathé"
         class="chip-logo"
         id="refresh"
