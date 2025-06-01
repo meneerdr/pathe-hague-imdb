@@ -1071,48 +1071,61 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-variant-numeric: tabular-nums; /* ensure digits line up */
 }
 
+/* ─── safe-area helpers ──────────────────────────────────────────── */
+/* ❶ keep the title (or whatever sits at the very top) clear of the
+      iOS status-bar when the page is opened as a PWA               */
+body{ padding-top:env(safe-area-inset-top); }
 
-/* ─── bottom filter-bar – touch devices only ─────────────────────── */
+
+/* ─── bottom filter-bar – touch devices only ────────────────────── */
 @media (hover:none) and (pointer:coarse){
 
+  /* ❷ the bar itself */
   .filter-bar{
-    /* layout -------------------------------------------------------- */
     position:fixed;
-    left:0; right:0; bottom:0;   /* top is deliberately NOT set   */
-    height:calc(44px + env(safe-area-inset-bottom));
+    left:0; right:0; bottom:0;
     z-index:35;
 
+    /* size only as big as it needs to be */
+    height:auto;                                    /* <— was hard-coded 44 px  */
+    min-height:calc(2.5rem + env(safe-area-inset-bottom));
+
     display:flex;
-    align-items:center;          /* stop chips stretching */
+    align-items:center;     /* chips keep their natural height        */
     gap:.5rem;
     overflow-x:auto;
-    -webkit-overflow-scrolling:touch;    /* smooth swipe */
+    -webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity;
 
-    /* visuals ------------------------------------------------------- */
+    /* breathing-room (incl. safe-area) */
     padding:.25rem env(safe-area-inset-left)
             calc(.25rem + env(safe-area-inset-bottom))
             env(safe-area-inset-right);
-    background:rgba(246,246,247,.95);    /* opaque enough – no see-through */
-    backdrop-filter:blur(10px) saturate(160%);
+
+    /* solid backdrop → no “see-through” while scrolling */
+    background:#f6f6f7;      /* same colour as <body>                */
+    border-top:1px solid #ddd;
     box-shadow:0 -1px 4px #0002;
-    scroll-snap-type:x proximity;
   }
 
-  /* space for the bar so cards don’t disappear underneath ---------- */
+  /* ❸ leave space so cards never hide under the bar */
   body{
-    padding-bottom:calc(44px + 1rem + env(safe-area-inset-bottom));
+    padding-bottom:calc(2.5rem + 1rem + env(safe-area-inset-bottom));
   }
 
-  /* chips ----------------------------------------------------------- */
+  /* ❹ chips: single line, snap when you swipe */
   .chip{
     flex:0 0 auto;
     white-space:nowrap;
     scroll-snap-align:start;
   }
 
-  /* dark-mode tweak ------------------------------------------------- */
+  /* ❺ dark-mode variant */
   @media (prefers-color-scheme:dark){
-    .filter-bar{ background:rgba(0,0,0,.75); }
+    .filter-bar{
+      background:#000;
+      border-top-color:#222;
+    }
   }
 }
 
