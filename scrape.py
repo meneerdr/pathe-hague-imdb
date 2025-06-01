@@ -1069,42 +1069,98 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-variant-numeric: tabular-nums; /* ensure digits line up */
 }
 
-/* ─── bottom filter-bar on touch screens ───────────────────────────── */
-@media (hover:none) and (pointer:coarse){
-  .filter-bar{
-    /* existing ↓ */
-    position:fixed;
-    bottom:calc(env(safe-area-inset-bottom) + .25rem);
-    left:0; right:0;
-    margin:0 .5rem;
-    padding:.5rem env(safe-area-inset-left)
-            .5rem env(safe-area-inset-right);
-    display:flex;
-    gap:.5rem;
-    overflow-x:auto;
-    /* NEW ↓↓↓ ------------------------------------------------------- */
-    align-items:center;          /* stop the chips from stretching   */
-    overflow-y:hidden;           /* kill the accidental V-scrollbar  */
-    min-height:3rem;             /* gives the bar a definite height  */
-  }
+/* ================================================================
+   FILM-GRID  › FILTER BAR  (top on desktop, bottom on touch)
+   ================================================================= */
 
-  /* (optional) hide the tiny horizontal scrollbar chrome */
-  .filter-bar::-webkit-scrollbar{ display:none; }
+/* ---------- default (desktop, track-pad, mouse) – sticky TOP ----- */
+.filter-bar{
+  position:sticky;
+  top:0;
+  z-index:20;
+
+  display:flex;
+  gap:.5rem;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;   /* no rubber-banding */
+  scroll-snap-type:x proximity;    /* gentle snap scrolling */
+
+  padding:.5rem 0 .75rem;
+  background:#f6f6f7;              /* light-mode background */
 }
 
+@media(prefers-color-scheme:dark){
+  .filter-bar{ background:#000; }
+}
+
+/* every individual “chip” ---------------------------------------- */
 .chip{
-  flex:0 0 auto;          /* never shrink */
-  white-space:nowrap;     /* never break */
-  scroll-snap-align:start;
+  flex:0 0 auto;            /* never shrink, never grow  */
+  white-space:nowrap;       /* keep each word on one line */
+  scroll-snap-align:start;  /* start-edge snaps into view */
+
+  font-size:.8rem;
+  padding:.25rem .6rem;
+  border-radius:16px;
+  background:#ddd;
+  color:#000;
+  border:1px solid #ccc;
+  cursor:pointer;
+  user-select:none;
+}
+.chip.active{
+  background:#333;
+  color:#fff;
 }
 
-.filter-bar{ scroll-snap-type:x proximity; }       /* already inside the block above */
-
+/* ---------- TOUCH SCREENS – fixed BOTTOM bar -------------------- */
 @media (hover:none) and (pointer:coarse){
+
+  .filter-bar{
+    /* dock to the very bottom, above the Home indicator */
+    position:fixed;
+    left:0; right:0; bottom:0;
+    top:auto;                          /* override the top value */
+    z-index:35;
+
+    /* keep pills short – fixes the “full-height” bug */
+    align-items:center;
+
+    /* spacing & iPhone safe-areas ------------------------------ */
+    padding:.4rem  env(safe-area-inset-left)
+            calc(.6rem + env(safe-area-inset-bottom))
+            env(safe-area-inset-right);
+
+    background:#f6f6f7;               /* make it fully opaque   */
+    box-shadow:0 -1px 4px #0003;      /* subtle top edge        */
+
+    /* if you like a frosted look switch to:
+       background:rgba(246,246,247,.95);
+       backdrop-filter:blur(10px) saturate(150%);
+       but remember translucency will again reveal scrolled-by
+       content in the safe-area. */
+  }
+
+  @media(prefers-color-scheme:dark){
+    .filter-bar{ background:#000; }
+  }
+
+  /* paint the safe-area triangle so nothing scrolls underneath */
+  .filter-bar::after{
+    content:"";
+    position:fixed;
+    left:0; right:0; bottom:0;
+    height:env(safe-area-inset-bottom);
+    background:inherit;               /* same colour as the bar */
+    pointer-events:none;
+  }
+
+  /* give the page enough room so the bar doesn’t hide cards */
   body{
-    padding-bottom:calc(4.5rem + env(safe-area-inset-bottom));
+    padding-bottom:calc(4rem + env(safe-area-inset-bottom));
   }
 }
+
 
 
 """
