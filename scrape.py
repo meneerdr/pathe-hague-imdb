@@ -1426,8 +1426,8 @@ function wireFaceTabs() {{
   // ─── pull-to-refresh logic ─────────────────────────────────────
   let __ptrStartY = 0;
   let __ptrDist   = 0;
-  const __ptrOffset    = 40; // how many pixels to pull before showing any bar
-  const __ptrThreshold = 60; // how many pixels (after offset) before triggering reload
+  const __ptrOffset    = 50; // how many pixels to pull before showing any bar
+  const __ptrThreshold = 50; // how many pixels (after offset) before triggering reload
 
 
   // touchstart: only if we’re scrolled all the way to top
