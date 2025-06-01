@@ -1070,31 +1070,38 @@ h1{font-size:1.5rem;margin:0 0 1rem}
 }
 
 /* ─── bottom filter-bar on touch screens ───────────────────────────── */
-@media (hover:none) and (pointer:coarse){
+@media (hover:none) and (pointer:coarse){          /* touch devices only */
   .filter-bar{
-    position:fixed;                /* always visible */
-    bottom:0; left:0; right:0;
-    top:auto;                      /* undo the old sticky-top */
-    z-index:35;                    /* above cards & snackbar */
+    position:fixed;
+    left:0; right:0;
+    bottom:calc(env(safe-area-inset-bottom) + .25rem);
 
-    /* iOS safe-area & a bit of breathing room */
-    padding:.5rem env(safe-area-inset-left)
-            calc(.75rem + env(safe-area-inset-bottom))
-            env(safe-area-inset-right);
+    /* inner spacing:   top / lr / bottom  */
+    padding:.4rem .6rem calc(.4rem + env(safe-area-inset-bottom));
 
-    /* raise the visual hierarchy & fight translucency */
-    background:rgba(246,246,247,.95);     /* same colour, slight opacity */
-    backdrop-filter:blur(10px);           /* iOS  ≥15 “frosted glass”   */
-    box-shadow:0 -1px 4px #0003;
+    backdrop-filter:saturate(140%) blur(10px);     /* nice frosted look */
+    background:#f6f6f7cc;                          /* translucent for light */
+    border-radius:16px;                            /* rounded ends         */
+    margin:0 .5rem;                                /* keep away from sides */
+    box-shadow:0 0 3px #0003;
+    overflow-x:auto;
+    scrollbar-width:none;
   }
-
-  /* give the page enough room so the bar doesn’t cover content */
-  body{ padding-bottom:calc(3.5rem + env(safe-area-inset-bottom)); }
+  .filter-bar::-webkit-scrollbar{display:none;}    /* hide iOS scrollbar */
 }
 
-/* dark-mode variant (same @media) */
-@media (hover:none) and (pointer:coarse) and (prefers-color-scheme:dark){
-  .filter-bar{ background:rgba(0,0,0,.75); }
+.chip{
+  flex:0 0 auto;          /* never shrink */
+  white-space:nowrap;     /* never break */
+  scroll-snap-align:start;
+}
+
+.filter-bar{ scroll-snap-type:x proximity; }       /* already inside the block above */
+
+@media (hover:none) and (pointer:coarse){
+  body{
+    padding-bottom:calc(4.5rem + env(safe-area-inset-bottom));
+  }
 }
 
 
