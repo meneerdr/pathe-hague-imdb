@@ -1211,6 +1211,13 @@ h1 {
   }
 }
 
+/* make the logo match the h1 height and align middle */
+.h1-icon {
+  width: auto;             /* match approx. the 1.5rem font-size of h1 */
+  height: auto;
+  vertical-align: middle;
+  margin-right: 0.5rem;      /* a little gap between logo and text */
+}
 
 """
 
@@ -1248,9 +1255,13 @@ HTML_TMPL = """<!doctype html>
 </head>
 <body>
 
-    <h1>
-      Pathé Den Haag · {formatted_date}
-    </h1>
+<h1>
+  <img src="logos/pathe-logo.svg"
+       alt="Pathé"
+       class="h1-icon"
+       id="refresh">
+  {formatted_date}, {build_time}
+</h1>
 
   <!-- quick-filter chips -->
   <div class="filter-bar">
@@ -1785,7 +1796,6 @@ def build_html(shows: List[dict],
         if flag:
             buttons.append(f'<span class="event-button">{flag}</span>')
 
-
         # Premium-format buttons (zone-scoped)
         if zd.get("hasIMAX"):
             buttons.append(
@@ -1974,6 +1984,7 @@ def build_html(shows: List[dict],
 
 
     now = dt.datetime.now(ZoneInfo("Europe/Amsterdam")).strftime("%Y-%m-%d %H:%M %Z")
+    build_time = dt.datetime.now(ZoneInfo("Europe/Amsterdam")).strftime("%H:%M")
 
     # escape any stray “{ }” that may appear inside movie titles etc.
     cards_html = "\n    ".join(cards)
@@ -1996,6 +2007,7 @@ def build_html(shows: List[dict],
         css=MOBILE_CSS,
         cards=cards_html,
         now=now,
+        build_time=build_time,
         formatted_date=formatted_date,
         show_times=show_times_json          # ← NEW
     )
