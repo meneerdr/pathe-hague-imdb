@@ -1079,47 +1079,67 @@ h1{
 
 
 /* ─── bottom filter-bar — touch devices only ─────────────────────── */
-@media (hover:none) and (pointer:coarse){
+@media (hover: none) and (pointer: coarse) {
 
-  /* ❶  the bar itself */
+  /* ❶ the bar itself */
   .filter-bar{
-    position:fixed; left:0; right:0; bottom:0;
-    z-index:999;                                   /* stay above cards */
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 999;
 
-    display:flex; align-items:center; gap:.5rem;
-    overflow-x:auto; -webkit-overflow-scrolling:touch;
-    scroll-snap-type:x proximity;
+    display: flex;
+    align-items: center;
+    gap: .5rem;                         /* chip-to-chip gap          */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
 
-    /* ––––– interior spacing ––––– */
-    --pad-top : .35rem;       /* keep as-is (space *above* the chips)   */
-    --pad-bot : .12rem;       /* <<< much smaller space *below* chips   */
+    /* --- interior spacing --- */
+    --pad-top : .32rem;                 /* space *above* chips       */
+    --pad-bot : .02rem;                 /* ♦ trimmed space *below*   */
+    --row-h   : 2.15rem;                /* ≈ chip height             */
 
-    padding: var(--pad-top)  env(safe-area-inset-left)
-             calc(var(--pad-bot) + env(safe-area-inset-bottom))
-             env(safe-area-inset-right);
+    padding:
+      var(--pad-top)                    /* top    */
+      calc(env(safe-area-inset-left) + .45rem)     /* left  (+ extra nudge) */
+      calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
+      env(safe-area-inset-right);                   /* right */
 
-    /* visual treatment */
-    background:rgba(246,246,247,.95);
-    backdrop-filter:blur(10px) saturate(160%);
-    box-shadow:0 -1px 4px #0003;
+    background: rgba(246,246,247,.95);
+    backdrop-filter: blur(10px) saturate(160%);
+    box-shadow: 0 -1px 4px #0003;
 
-    /* expose full height for the body-padding calculation */
-    --row-h : 2.15rem;    /* ≈ chip height                    */
-    --h     : calc(var(--row-h) + var(--pad-top) + var(--pad-bot)
-                   + env(safe-area-inset-bottom));
+    /* expose full height for body padding */
+    --h: calc(var(--row-h) + var(--pad-top) + var(--pad-bot)
+              + env(safe-area-inset-bottom));
   }
 
-  /* ❷  keep the cards clear of the bar */
-  body{ padding-bottom:var(--h); }
+  /* ❷ paint an invisible “tail” so the safe-area is coloured too */
+  .filter-bar::after{
+    content:"";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: env(safe-area-inset-bottom);
+    background: inherit;
+    pointer-events: none;
+  }
 
-  /* ❸  chips: never wrap, snap when you swipe */
-  .chip{ flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; }
+  /* ❸ keep cards clear of the bar */
+  body{ padding-bottom: var(--h); }
 
-  /* ❹  dark-mode tint */
-  @media (prefers-color-scheme:dark){
-    .filter-bar{ background:rgba(0,0,0,.80); }
+  /* ❹ chips: never wrap, snap as you swipe */
+  .chip{ flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
+
+  /* ❺ first chip gets a tiny left buffer (extra insurance) */
+  .filter-bar > .chip:first-child{ margin-left: .05rem; }
+
+  /* ❻ dark-mode tint */
+  @media (prefers-color-scheme: dark){
+    .filter-bar,
+    .filter-bar::after{ background: rgba(0,0,0,.80); }
   }
 }
+
 
 
 
