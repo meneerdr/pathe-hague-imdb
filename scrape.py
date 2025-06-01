@@ -1080,6 +1080,10 @@ h1 {
 /* ─── 3) Touch / “pointer: coarse” (fixed bottom) ────────────────── */
 @media (hover: none) and (pointer: coarse) {
   .filter-bar {
+    /* prevent the bar from being dragged by a vertical swipe */
+    overscroll-behavior: contain;
+    /* only allow horizontal “pan” on the pills, not vertical */
+    touch-action: pan-x;
     position: fixed;
     left: 0;
     right: 0;
