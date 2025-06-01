@@ -1112,52 +1112,51 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   background:#333;
   color:#fff;
 }
-
-/* ---------- TOUCH SCREENS – fixed BOTTOM bar -------------------- */
+/* ─── bottom filter-bar – touch devices only ────────────────────────── */
 @media (hover:none) and (pointer:coarse){
 
+  /* 1. fixed bar */
   .filter-bar{
-    /* dock to the very bottom, above the Home indicator */
     position:fixed;
-    left:0; right:0; bottom:0;
-    top:auto;                          /* override the top value */
+    left:0; right:0;        /* full width */
+    bottom:0;               /* sit on the very edge */
     z-index:35;
 
-    /* keep pills short – fixes the “full-height” bug */
-    align-items:center;
-
-    /* spacing & iPhone safe-areas ------------------------------ */
-    padding:.4rem  env(safe-area-inset-left)
-            calc(.6rem + env(safe-area-inset-bottom))
+    /* visual style */
+    display:flex;
+    gap:.5rem;
+    overflow-x:auto;
+    padding:.5rem env(safe-area-inset-left)
+            calc(.75rem + env(safe-area-inset-bottom))
             env(safe-area-inset-right);
 
-    background:#f6f6f7;               /* make it fully opaque   */
-    box-shadow:0 -1px 4px #0003;      /* subtle top edge        */
+    background:#f6f6f7;                 /* SAME colour as <body> */
+    box-shadow:0 -1px 4px #0002;        /* faint top edge */
+    border-top:1px solid #ddd;          /* crisp separator */
 
-    /* if you like a frosted look switch to:
-       background:rgba(246,246,247,.95);
-       backdrop-filter:blur(10px) saturate(150%);
-       but remember translucency will again reveal scrolled-by
-       content in the safe-area. */
+    /* never let content show through */
+    backdrop-filter:none;               /* kill translucency */
   }
 
-  @media(prefers-color-scheme:dark){
-    .filter-bar{ background:#000; }
+  /* 2. make sure cards can scroll *under* the bar without being hidden */
+  :root{
+    --filterbar-height: calc(3.5rem + env(safe-area-inset-bottom));
   }
-
-  /* paint the safe-area triangle so nothing scrolls underneath */
-  .filter-bar::after{
-    content:"";
-    position:fixed;
-    left:0; right:0; bottom:0;
-    height:env(safe-area-inset-bottom);
-    background:inherit;               /* same colour as the bar */
-    pointer-events:none;
-  }
-
-  /* give the page enough room so the bar doesn’t hide cards */
   body{
-    padding-bottom:calc(4rem + env(safe-area-inset-bottom));
+    padding-bottom:var(--filterbar-height);
+  }
+
+  /* 3. chips – always a single line, snap as you swipe */
+  .chip{
+    flex:0 0 auto;          /* never shrink */
+    white-space:nowrap;     /* never wrap   */
+    scroll-snap-align:start;
+  }
+  .filter-bar{ scroll-snap-type:x proximity; }
+
+  /* 4. dark-mode colour swap */
+  @media (prefers-color-scheme:dark){
+    .filter-bar{ background:#000; border-top-color:#222; }
   }
 }
 
@@ -1170,7 +1169,8 @@ HTML_TMPL = """<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8">
   <title>Pathé Den Haag · {formatted_date}</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+
   <meta name="color-scheme" content="light dark">   <!-- enables iOS dark-mode -->
 
 
