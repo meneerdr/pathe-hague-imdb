@@ -774,25 +774,6 @@ h1 {
   color: #fff;
 }
 
-/* Quick-filter toolbar */
-@media (hover:hover) and (pointer:fine){
-    .filter-bar{
-      position:sticky;   /* ← makes it “float” */
-      top:0;             /* ← stick to the very top of the viewport */
-      z-index:20;        /* ← stay above the cards */
-      display:flex;
-      gap:.5rem;
-      overflow-x:auto;
-      padding:.5rem 0 .75rem;
-      background:#f6f6f7;          /* light-mode background */
-    }
-}
-
-/* keep the dark-mode backdrop in sync */
-@media(prefers-color-scheme:dark){
-  .filter-bar{ background:#000; }
-}
-
 
 /* Button styling for different categories */
 .buttons-line {
@@ -1076,57 +1057,76 @@ h1 {
   font-variant-numeric: tabular-nums; /* ensure digits line up */
 }
 
+/* ─── Filter bar 1) Desktop / pointer:fine ───────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .filter-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;          /* stay above the cards */
+    display: flex;
+    gap: .5rem;
+    overflow-x: auto;
+    padding: .5rem 0 .75rem;
+    background: #f6f6f7;  /* light‐mode background */
+  }
+}
 
-/* ─── bottom filter-bar — touch devices only ─────────────────────── */
+/* ─── Filter bar 2) Dark-mode override (applies everywhere) ───────── */
+@media (prefers-color-scheme: dark) {
+  .filter-bar {
+    background: #000;     /* keep the same toolbar in dark */
+  }
+}
+
+/* ─── Filter bar 3) Touch / pointer:coarse ────────────────────────── */
 @media (hover: none) and (pointer: coarse) {
-
-  /* ❶  the bar itself */
   .filter-bar {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 999;                                /* stay above cards */
-
+    z-index: 999;                       /* stay above cards */
     display: flex;
     align-items: center;
-    gap: .1rem;                                  /* chip-to-chip gap */
+    gap: .1rem;                         /* chip-to-chip gap */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
 
-    /* ––––– interior spacing ––––– */
-    --pad-top:  .35rem;                          /* space *above* chips */
-    --pad-bot:  .12rem;                          /* space *below* chips */
+    /* interior spacing */
+    --pad-top:  .35rem;                 /* space *above* chips */
+    --pad-bot:  .12rem;                 /* space *below* chips */
 
     padding:
-      var(--pad-top)                            /* top */
-      env(safe-area-inset-left)                 /* left */
+      var(--pad-top)                   /* top */
+      env(safe-area-inset-left)        /* left */
       calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
-      env(safe-area-inset-right);               /* right */
+      env(safe-area-inset-right);      /* right */
 
-    /* visual treatment */
-    background: #fbbd0a;                         /* Pathe-yellow */
-    /* remove any translucent blur—keep it a solid brand colour */
-    backdrop-filter: none;
-    box-shadow: 0 -1px 4px #0003;                /* subtle top edge */
+    background: #fbbd0a;                /* Pathe-yellow */
+    backdrop-filter: none;              /* no blur */
+    box-shadow: 0 -1px 4px #0003;       /* subtle top edge */
 
-    /* expose full height for the body-padding calculation */
-    --row-h: 2.15rem;                            /* ≈ chip height */
+    /* recalculate total height for body padding */
+    --row-h: 2.5rem;                    /* ≈ chip height */
     --h: calc(
       var(--row-h)
       + var(--pad-top)
       + var(--pad-bot)
       + env(safe-area-inset-bottom)
     );
+
+    /* keep it on its own layer so it never gets clipped on overscroll */
+    transform: translateZ(0);
+    will-change: transform;
   }
 
-  /* ❷  keep the cards clear of the bar */
+  /* make room at the bottom so cards don’t slip under the bar */
   body {
     padding-bottom: var(--h);
   }
-
 }
+
 
 /* ─── Pathe Brand Colors ───────────────────────────────────────── */
 :root {
@@ -1205,17 +1205,6 @@ h1 {
   height: 2.2rem;
   margin-right: 0.3rem;
   vertical-align: middle;
-}
-
-/* Ensure the bottom “filter-bar” spacing matches new chip height */
-@media (hover: none) and (pointer: coarse) {
-  .filter-bar {
-    /* recalculate height if chips grew taller */
-    --row-h: 2.5rem;
-  }
-  body {
-    padding-bottom: var(--h); /* keep as-is for safe‐area, or adjust if needed */
-  }
 }
 
 /* make the logo match the h1 height and align middle */
