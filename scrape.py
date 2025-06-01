@@ -1079,74 +1079,45 @@ h1{
 
 
 /* ─── bottom filter-bar — touch devices only ─────────────────────── */
-@media (hover: none) and (pointer: coarse) {
+@media (hover:none) and (pointer:coarse){
 
   /* ❶  the bar itself */
-  .filter-bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 999;                             /* stay above cards */
+  .filter-bar{
+    position:fixed; left:0; right:0; bottom:0;
+    z-index:999;                                   /* stay above cards */
 
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x proximity;
-
-    /* stop vertical pulls that start on the bar, only scroll sideways */
-    overscroll-behavior: none;
-    touch-action: pan-x;
+    display:flex; align-items:center; gap:.5rem;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity;
 
     /* ––––– interior spacing ––––– */
-    --pad-top : .35rem;      /* space above the chips (unchanged) */
-    --pad-bot : .12rem;      /* much smaller space below the chips */
+    --pad-top : .35rem;       /* keep as-is (space *above* the chips)   */
+    --pad-bot : .12rem;       /* <<< much smaller space *below* chips   */
 
-    padding:
-      var(--pad-top)         /* top padding */
-      env(safe-area-inset-left) 
-      calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom + safe-area */
-      env(safe-area-inset-right);
+    padding: var(--pad-top)  env(safe-area-inset-left)
+             calc(var(--pad-bot) + env(safe-area-inset-bottom))
+             env(safe-area-inset-right);
 
     /* visual treatment */
-    background: rgba(246,246,247,.95);  
-    backdrop-filter: blur(10px) saturate(160%);
-    box-shadow: 0 -1px 4px #0003;
+    background:rgba(246,246,247,.95);
+    backdrop-filter:blur(10px) saturate(160%);
+    box-shadow:0 -1px 4px #0003;
 
     /* expose full height for the body-padding calculation */
-    --row-h : 2.15rem;      /* ≈ chip-row height */
-    --fb-h  : calc(
-      var(--row-h)
-      + var(--pad-top)
-      + var(--pad-bot)
-      + env(safe-area-inset-bottom)
-    );
+    --row-h : 2.15rem;    /* ≈ chip height                    */
+    --h     : calc(var(--row-h) + var(--pad-top) + var(--pad-bot)
+                   + env(safe-area-inset-bottom));
   }
 
-  /* ❷  keep cards clear of the bar */
-  body {
-    padding-bottom: var(--fb-h);
-  }
+  /* ❷  keep the cards clear of the bar */
+  body{ padding-bottom:var(--h); }
 
   /* ❸  chips: never wrap, snap when you swipe */
-  .chip {
-    flex: 0 0 auto;
-    white-space: nowrap;
-    scroll-snap-align: start;
-  }
+  .chip{ flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; }
 
   /* ❹  dark-mode tint */
-  @media (prefers-color-scheme: dark) {
-    .filter-bar {
-      background: rgba(0,0,0,.80);
-    }
-  }
-
-  /* ❺  suppress rubber-band wiggle anywhere else on the page */
-  html, body {
-    overscroll-behavior-y: contain;
+  @media (prefers-color-scheme:dark){
+    .filter-bar{ background:rgba(0,0,0,.80); }
   }
 }
 
