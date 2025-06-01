@@ -619,10 +619,17 @@ body{
   /* default (light) colours */
   background:#f6f6f7;
   color:#111;
+  overscroll-behavior-y: contain;
 
   /* 🆕 let iOS/Safari know that dark-mode variants are present */
   color-scheme: light dark;
 }
+
+/* If your cards live inside a .grid that actually scrolls, do this instead:
+.grid {
+  overscroll-behavior-y: contain;
+}
+*/
 
 h1 {
   font-size: 1.5rem;                      /* slightly smaller than 2rem */
@@ -1120,16 +1127,6 @@ h1 {
     /* keep this layer separate so it never “loses” its children */
     transform: translateZ(0);
     will-change: transform;
-  }
-
- /* wrap all the pills inside a scrollable child */
-  .filter-bar .scroll-wrapper {
-    flex: 1;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    display: flex;
-    gap: .1rem;
-    padding: 0 .6rem; /* optional left/right padding */
   }
 
   /* push page content up so cards don’t slide under the bottom bar */
