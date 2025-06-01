@@ -635,6 +635,14 @@ h1 {
   text-shadow: 0 1px 2px rgba(0,0,0,0.1);   /* keep the subtle pop, but unchanged */
 }
 
+@media (hover: none) and (pointer: coarse) {
+  h1 {
+    margin-bottom: 1.2rem;
+    padding-bottom: 1rem;
+  }
+}
+
+
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
 /* ───── Card visuals ──────────────────────────────────────────── */
 .card{
