@@ -625,27 +625,6 @@ body{
   color-scheme: light dark;
 }
 
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overscroll‐behavior: none;      /* prevent the window from ever rubber‐banding */
-  overflow: hidden;               /* disable window scrolling */
-}
-
-/* everything that used to live directly under <body> (except #pull-to-refresh and #snackbar)
-   now lives inside .main: */
-.main {
-  position: absolute;
-  top: 0;
-  bottom: var(--h);               /* leave room for the fixed bottom “filter-bar” */
-  left: 0;
-  right: 0;
-  overflow-y: auto;               /* this is the *only* place you scroll vertically */
-  overscroll-behavior: contain;   /* prevent inner edge bounce from affecting fixed bars */
-}
-
-
 /* If your cards live inside a .grid that actually scrolls, do this instead:
 .grid {
   overscroll-behavior-y: contain;
@@ -961,9 +940,7 @@ h1 {
   .ratings-inline, .theaters-inline { color:#ccc; }
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
   .faces .face:not([data-face="0"]) .cinema-logo { background: #555; color: #fff; }
-  h1 {
-    color: var(--pathe-yellow);
-  }
+
 }
 
 /* utility for JS filter */
@@ -1104,6 +1081,9 @@ h1 {
 @media (prefers-color-scheme: dark) {
   .filter-bar {
     background: #000;       /* keep the same bar in dark mode */
+  }
+  h1 {
+    color: var(--pathe-yellow);
   }
 }
 
@@ -1360,8 +1340,6 @@ HTML_TMPL = """<!doctype html>
   <span class="label refreshing" style="display: none;">Refreshing…</span>
 </div>
 
-<div class="main">
-
 <h1>
   <img src="logos/pathe-logo.svg"
        alt="Pathé"
@@ -1395,8 +1373,6 @@ HTML_TMPL = """<!doctype html>
   <footer style="margin-top:1rem;font-size:.75rem;">
     Generated {now} · Source: Pathé API + OMDb
   </footer>
-
-</div>
 
   <!-- tiny JS for the quick-filter (all braces are doubled for str.format) -->
 <script>
