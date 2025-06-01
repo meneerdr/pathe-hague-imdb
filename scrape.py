@@ -1178,7 +1178,7 @@ h1{
 
 /* Optional: if you embed a tiny Pathe “bubble” logo inside */
 .chip-logo {
-  height: 1rem;
+  height: 1.5rem;
   margin-right: 0.3rem;
   vertical-align: middle;
 }
@@ -1232,17 +1232,18 @@ HTML_TMPL = """<!doctype html>
 <body>
 
     <h1>
-      <img
-        src="logos/apple-touch-icon.png"
-        alt="Pathé"
-        style="width:1em;height:auto;vertical-align:middle;margin-right:.25em;"
-        id="refresh"
-      >
+
       Pathé Den Haag · {formatted_date}
     </h1>
 
   <!-- quick-filter chips -->
   <div class="filter-bar">
+        <img
+        src="logos/apple-touch-icon.png"
+        alt="Pathé"
+        class="chip-logo"
+        id="refresh"
+      >
     <span class="chip" data-tag="all">All</span> 
     <span class="chip" data-tag="now">Now</span>
     <span class="chip" data-tag="book">Book</span>
