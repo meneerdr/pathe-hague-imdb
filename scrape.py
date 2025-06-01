@@ -779,21 +779,6 @@ h1{
   .filter-bar{ background:#000; }
 }
 
-.chip{
-  flex:0 0 auto;
-  font-size:.8rem;
-  padding:.25rem .6rem;
-  border-radius:16px;
-  background:#ddd;
-  color:#000;
-  border:1px solid #ccc;
-  cursor:pointer;
-  user-select:none;
-}
-.chip.active{
-  background:#333;
-  color:#fff;
-}
 
 /* Button styling for different categories */
 .buttons-line {
@@ -1127,46 +1112,87 @@ h1{
     padding-bottom: var(--h);
   }
 
-  /* ❸  style each chip “pill” */
+}
+
+/* ─── Pathe Brand Colors ───────────────────────────────────────── */
+:root {
+  --pathe-yellow: #fbbd0a;
+  --pathe-black:  #000000;
+  --pathe-gray:   #444444;
+  --chip-text:    #ffffff;
+}
+
+/* ─── Revised Chip Styling ──────────────────────────────────────── */
+.chip {
+  flex: 0 0 auto;
+  font-size: 0.9rem;                  /* slightly larger for readability */
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;             /* more breathing room */
+  border-radius: 999px;               /* full pill shape */
+  background: transparent;
+  color: var(--pathe-black);
+  border: 2px solid var(--pathe-gray);
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* subtle shadow */
+  transition: 
+    background 0.15s ease-in-out, 
+    color 0.15s ease-in-out, 
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+  margin: 0.1rem;                     /* small gap around each pill */
+}
+
+/* Active chip: black fill, yellow text */
+.chip.active {
+  background: var(--pathe-black);
+  color: var(--pathe-yellow);
+  border-color: var(--pathe-black);
+}
+
+/* Hover / press feedback */
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+  }
+}
+.chip:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* For dark mode: invert colors on active/inactive */
+@media (prefers-color-scheme: dark) {
   .chip {
-    flex: 0 0 auto;
-    white-space: nowrap;
-    scroll-snap-align: start;
-
-    background: #ffffff;                        /* pure white */
-    color: #000000;                             /* black text */
-    border: 1px solid #ddd;                     /* light grey border */
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);   /* very subtle lift */
-    padding: .25rem .6rem;
-    border-radius: 16px;
-    font-size: .8rem;
-    cursor: pointer;
-    user-select: none;
+    color: var(--chip-text);
+    border-color: #555;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
   }
-
   .chip.active {
-    background: #000000;                        /* black background when active */
-    color: #ffffff;                             /* white text when active */
-  }
-
-  /* ❹  dark-mode tint for the bar (optional: you can tweak if you want) */
-  @media (prefers-color-scheme: dark) {
-    .filter-bar {
-      background: #fbbd0a;                      /* keep same Pathe-yellow */
-      box-shadow: 0 -1px 4px #0006;             /* slightly stronger shadow in dark */
-    }
-    .chip {
-      background: #ffffff;                      /* white pills still stand out */
-      color: #000000;
-      border: 1px solid #555;                   /* slightly darker border in dark */
-    }
-    .chip.active {
-      background: #000000;
-      color: #ffffff;
-    }
+    background: var(--pathe-yellow);
+    color: var(--pathe-black);
+    border-color: var(--pathe-yellow);
   }
 }
 
+/* Optional: if you embed a tiny Pathe “bubble” logo inside */
+.chip-logo {
+  height: 1rem;
+  margin-right: 0.3rem;
+  vertical-align: middle;
+}
+
+/* Ensure the bottom “filter-bar” spacing matches new chip height */
+@media (hover: none) and (pointer: coarse) {
+  .filter-bar {
+    /* recalculate height if chips grew taller */
+    --row-h: 2.5rem;
+  }
+  body {
+    padding-bottom: var(--h); /* keep as-is for safe‐area, or adjust if needed */
+  }
+}
 
 
 """
