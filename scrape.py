@@ -624,10 +624,17 @@ body{
   color-scheme: light dark;
 }
 
-h1{
-  font-size:1.5rem; margin:0 0 1rem;
-  padding-top:.25rem;                  /* small, constant breathing room */
+h1 {
+  font-size: 1.5rem;                      /* slightly smaller than 2rem */
+  font-weight: 600;                        /* keep it bold, but not enormous */
+  color: var(--pathe-black);  
+  margin: 0 0 0.3rem;                        /* less bottom margin for tighter spacing */
+  padding: 0 0 0.3rem;                     /* smaller bottom padding to reduce “gap” */
+  border-bottom: 2px solid var(--pathe-yellow); /* thinner underline */
+  letter-spacing: 0.3px;                   /* less tracking than before */
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);   /* keep the subtle pop, but unchanged */
 }
+
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-gap:0.5rem}
 /* ───── Card visuals ──────────────────────────────────────────── */
