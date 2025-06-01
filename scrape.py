@@ -1076,6 +1076,8 @@ h1 {
     /* prevent the bar from being dragged by a vertical swipe */
     overscroll-behavior: contain;
     /* only allow horizontal “pan” on the pills, not vertical */
+    overflow-x: auto; 
+    touch-action: pan-x;
     position: fixed;
     left: 0;
     right: 0;
@@ -1112,16 +1114,6 @@ h1 {
     /* keep this layer separate so it never “loses” its children */
     transform: translateZ(0);
     will-change: transform;
-  }
-
-  /* NEW inner scroller ------------------------------------------------ */
-  .filter-scroll{
-    display:flex;
-    gap:.1rem;
-    overflow-x:auto;
-    touch-action:pan-x;                 /* horizontal swipe only   */
-    -webkit-overflow-scrolling:touch;   /* momentum scrolling iOS  */
-    scroll-snap-type:x proximity;       /* keep your snap points   */
   }
 
   /* push page content up so cards don’t slide under the bottom bar */
@@ -1351,7 +1343,6 @@ HTML_TMPL = """<!doctype html>
 
   <!-- quick-filter chips -->
   <div class="filter-bar">
-   <div class="filter-scroll">
         <img
         src="logos/apple-touch-icon.png"
         alt="Pathé"
@@ -1369,7 +1360,6 @@ HTML_TMPL = """<!doctype html>
     <span class="chip" data-tag="future">Future</span>
     <span class="chip" data-tag="web">Web</span>
     <span class="chip" data-tag="watched">Hidden</span>
-   </div>
   </div>
   <div class="grid">
     {cards}
@@ -1436,10 +1426,10 @@ function wireFaceTabs() {{
   // ─── pull-to-refresh logic ─────────────────────────────────────
   let __ptrStartY = 0;
   let __ptrDist   = 0;
-  const __ptrThreshold = 90;  // how many pixels to pull before triggering reload
+  const __ptrThreshold = 60;  // how many pixels to pull before triggering reload
 
   // touchstart: only if we’re scrolled all the way to top
-  window.addEventListener('touchstart', e => {{
+   window.addEventListener('touchstart', e => {{
     if (e.target.closest('.filter-bar')) {{
       __ptrStartY = 0;
       return;
