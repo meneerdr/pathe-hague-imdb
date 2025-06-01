@@ -628,8 +628,8 @@ h1 {
   font-size: 1.5rem;                      /* slightly smaller than 2rem */
   font-weight: 600;                        /* keep it bold, but not enormous */
   color: var(--pathe-black);  
-  margin: 0.2rem 0 0.2rem 0;    /* top = 0.4rem, right = 0, bottom = 0.2rem, left = 0 */
-  padding: 0.2rem 0 0.2rem 0;    /* top = 0.4rem, right = 0, bottom = 0.2rem, left = 0 */
+  margin: 0.5rem 0 0.5rem 0;    /* top = 0.4rem, right = 0, bottom = 0.2rem, left = 0 */
+  padding: 0.5rem 0 0.5rem 0;    /* top = 0.4rem, right = 0, bottom = 0.2rem, left = 0 */
   border-bottom: 2px solid var(--pathe-yellow); /* thinner underline */
   letter-spacing: 0.3px;                   /* less tracking than before */
   text-shadow: 0 1px 2px rgba(0,0,0,0.1);   /* keep the subtle pop, but unchanged */
@@ -1213,7 +1213,7 @@ h1 {
 /* make the logo match the h1 height and align middle */
 .h1-icon {
   width: auto;             /* match approx. the 1.5rem font-size of h1 */
-  height: 2rem;
+  height: 2.2rem;
   vertical-align: middle;
   margin-right: 0.5rem;      /* a little gap between logo and text */
 }
