@@ -1129,7 +1129,7 @@ h1{
   font-weight: 600;
   padding: 0.4rem 0.8rem;             /* more breathing room */
   border-radius: 999px;               /* full pill shape */
-  background: transparent;
+  background: white;
   color: var(--pathe-black);
   border: 2px solid var(--pathe-gray);
   cursor: pointer;
