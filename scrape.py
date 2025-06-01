@@ -1165,13 +1165,13 @@ h1{
 /* For dark mode: invert colors on active/inactive */
 @media (prefers-color-scheme: dark) {
   .chip {
-    color: var(--chip-text);
-    border-color: #555;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    background: var(--pathe-gray);   /* or something like #222 */
+    color: var(--chip-text);         /* keeps the text white */
+    border-color: #555;              /* a slightly lighter border */
   }
   .chip.active {
-    background: var(--pathe-yellow);
-    color: var(--pathe-black);
+    background: var(--pathe-yellow); /* yellow on dark mode */
+    color: var(--pathe-black);       /* black text on yellow */
     border-color: var(--pathe-yellow);
   }
 }
