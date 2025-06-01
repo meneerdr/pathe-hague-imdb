@@ -1234,10 +1234,10 @@ body {
 /* hidden “pull to refresh” bar */
 #pull-to-refresh {
   position: fixed;
-  top: 0;
+  top: env(safe-area-inset-top);
   left: 0;
   right: 0;
-  height: 0;                        /* collapsed by default */
+  height: 0;
   background: var(--pathe-yellow);
   color: var(--pathe-black);
   display: flex;
@@ -1249,7 +1249,6 @@ body {
   z-index: 50;
   font-size: 0.9rem;
 }
-
 
 """
 
