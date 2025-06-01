@@ -1068,50 +1068,6 @@ h1{font-size:1.5rem;margin:0 0 1rem}
   font-size: .8rem;
   font-variant-numeric: tabular-nums; /* ensure digits line up */
 }
-
-/* ================================================================
-   FILM-GRID  › FILTER BAR  (top on desktop, bottom on touch)
-   ================================================================= */
-
-/* ---------- default (desktop, track-pad, mouse) – sticky TOP ----- */
-.filter-bar{
-  position:sticky;
-  top:0;
-  z-index:20;
-
-  display:flex;
-  gap:.5rem;
-  overflow-x:auto;
-  overscroll-behavior-x:contain;   /* no rubber-banding */
-  scroll-snap-type:x proximity;    /* gentle snap scrolling */
-
-  padding:.5rem 0 .75rem;
-  background:#f6f6f7;              /* light-mode background */
-}
-
-@media(prefers-color-scheme:dark){
-  .filter-bar{ background:#000; }
-}
-
-/* every individual “chip” ---------------------------------------- */
-.chip{
-  flex:0 0 auto;            /* never shrink, never grow  */
-  white-space:nowrap;       /* keep each word on one line */
-  scroll-snap-align:start;  /* start-edge snaps into view */
-
-  font-size:.8rem;
-  padding:.25rem .6rem;
-  border-radius:16px;
-  background:#ddd;
-  color:#000;
-  border:1px solid #ccc;
-  cursor:pointer;
-  user-select:none;
-}
-.chip.active{
-  background:#333;
-  color:#fff;
-}
 /* ─── bottom filter-bar – touch devices only ────────────────────────── */
 @media (hover:none) and (pointer:coarse){
 
@@ -1159,7 +1115,6 @@ h1{font-size:1.5rem;margin:0 0 1rem}
     .filter-bar{ background:#000; border-top-color:#222; }
   }
 }
-
 
 
 """
