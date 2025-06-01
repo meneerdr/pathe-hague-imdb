@@ -1178,7 +1178,7 @@ h1{
 
 /* Optional: if you embed a tiny Pathe “bubble” logo inside */
 .chip-logo {
-  height: 1.5rem;
+  height: 2rem;
   margin-right: 0.3rem;
   vertical-align: middle;
 }
