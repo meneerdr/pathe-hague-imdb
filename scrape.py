@@ -1345,6 +1345,7 @@ HTML_TMPL = """<!doctype html>
 
   <!-- quick-filter chips -->
   <div class="filter-bar">
+   <div class="scroll-wrapper">
         <img
         src="logos/apple-touch-icon.png"
         alt="Pathé"
@@ -1362,6 +1363,7 @@ HTML_TMPL = """<!doctype html>
     <span class="chip" data-tag="future">Future</span>
     <span class="chip" data-tag="web">Web</span>
     <span class="chip" data-tag="watched">Hidden</span>
+   </div>
   </div>
   <div class="grid">
     {cards}
