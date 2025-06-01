@@ -1426,7 +1426,9 @@ function wireFaceTabs() {{
   // ─── pull-to-refresh logic ─────────────────────────────────────
   let __ptrStartY = 0;
   let __ptrDist   = 0;
-  const __ptrThreshold = 60;  // how many pixels to pull before triggering reload
+  const __ptrOffset    = 20; // how many pixels to pull before showing any bar
+  const __ptrThreshold = 60; // how many pixels (after offset) before triggering reload
+
 
   // touchstart: only if we’re scrolled all the way to top
    window.addEventListener('touchstart', e => {{
@@ -1447,7 +1449,9 @@ function wireFaceTabs() {{
     __ptrDist = e.touches[0].clientY - __ptrStartY;
     if (__ptrDist > 0) {{
       e.preventDefault();  // prevent native bounce
-      const h = Math.min(__ptrDist, __ptrThreshold);
+      // subtract the “dead zone” before growing
+      const grow = __ptrDist - __ptrOffset;
+      const h    = Math.min(grow, __ptrThreshold);
       document.getElementById('pull-to-refresh').style.height = h + 'px';
     }}
   }});
@@ -1455,7 +1459,7 @@ function wireFaceTabs() {{
   // touchend: if pulled beyond threshold, reload; otherwise collapse
   window.addEventListener('touchend', () => {{
     const bar = document.getElementById('pull-to-refresh');
-    if (__ptrDist >= __ptrThreshold) {{
+    if (__ptrDist - __ptrOffset >= __ptrThreshold) {{
       bar.textContent = '⟳ Refreshing…';
       location.reload();
     }}
