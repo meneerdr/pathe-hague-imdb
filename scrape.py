@@ -1076,7 +1076,7 @@ h1{
 
     display: flex;
     align-items: center;
-    gap: .25rem;                                  /* chip-to-chip gap */
+    gap: .1rem;                                  /* chip-to-chip gap */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
