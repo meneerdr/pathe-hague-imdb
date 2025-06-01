@@ -1780,11 +1780,11 @@ def build_html(shows: List[dict],
             rating_class = "kids-rating-button" if is_kids else "adult-rating-button"
             buttons.append(f'<span class="{rating_class}">{content_rating}</span>')
 
-        # Show the flag if it is marked as a specialEvent (e.g. Classics, 50PLus, Docs, etc)
-        if s.get("specialEvent"):
-            flag = s.get("flag")
-            if flag:
-                buttons.append(f'<span class="event-button">{flag}</span>')
+        # Show the flag if flag is present (regardless of specialEvent)
+        flag = s.get("flag")
+        if flag:
+            buttons.append(f'<span class="event-button">{flag}</span>')
+
 
         # Premium-format buttons (zone-scoped)
         if zd.get("hasIMAX"):
