@@ -1081,66 +1081,91 @@ h1{
 /* ─── bottom filter-bar — touch devices only ─────────────────────── */
 @media (hover: none) and (pointer: coarse) {
 
-  /* ❶ the bar itself */
-  .filter-bar{
+  /* ❶  the bar itself */
+  .filter-bar {
     position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 999;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;                                /* stay above cards */
 
     display: flex;
     align-items: center;
-    gap: .5rem;                         /* chip-to-chip gap          */
+    gap: .5rem;                                  /* chip-to-chip gap */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
 
-    /* --- interior spacing --- */
-    --pad-top : .32rem;                 /* space *above* chips       */
-    --pad-bot : .02rem;                 /* ♦ trimmed space *below*   */
-    --row-h   : 2.15rem;                /* ≈ chip height             */
+    /* ––––– interior spacing ––––– */
+    --pad-top:  .35rem;                          /* space *above* chips */
+    --pad-bot:  .12rem;                          /* space *below* chips */
 
     padding:
-      var(--pad-top)                    /* top    */
-      calc(env(safe-area-inset-left) + .45rem)     /* left  (+ extra nudge) */
+      var(--pad-top)                            /* top */
+      env(safe-area-inset-left)                 /* left */
       calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
-      env(safe-area-inset-right);                   /* right */
+      env(safe-area-inset-right);               /* right */
 
-    background: rgba(246,246,247,.95);
-    backdrop-filter: blur(10px) saturate(160%);
-    box-shadow: 0 -1px 4px #0003;
+    /* visual treatment */
+    background: #fbbd0a;                         /* Pathe-yellow */
+    /* remove any translucent blur—keep it a solid brand colour */
+    backdrop-filter: none;
+    box-shadow: 0 -1px 4px #0003;                /* subtle top edge */
 
-    /* expose full height for body padding */
-    --h: calc(var(--row-h) + var(--pad-top) + var(--pad-bot)
-              + env(safe-area-inset-bottom));
+    /* expose full height for the body-padding calculation */
+    --row-h: 2.15rem;                            /* ≈ chip height */
+    --h: calc(
+      var(--row-h)
+      + var(--pad-top)
+      + var(--pad-bot)
+      + env(safe-area-inset-bottom)
+    );
   }
 
-  /* ❷ paint an invisible “tail” so the safe-area is coloured too */
-  .filter-bar::after{
-    content:"";
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: env(safe-area-inset-bottom);
-    background: inherit;
-    pointer-events: none;
+  /* ❷  keep the cards clear of the bar */
+  body {
+    padding-bottom: var(--h);
   }
 
-  /* ❸ keep cards clear of the bar */
-  body{ padding-bottom: var(--h); }
+  /* ❸  style each chip “pill” */
+  .chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: start;
 
-  /* ❹ chips: never wrap, snap as you swipe */
-  .chip{ flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
+    background: #ffffff;                        /* pure white */
+    color: #000000;                             /* black text */
+    border: 1px solid #ddd;                     /* light grey border */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);   /* very subtle lift */
+    padding: .25rem .6rem;
+    border-radius: 16px;
+    font-size: .8rem;
+    cursor: pointer;
+    user-select: none;
+  }
 
-  /* ❺ first chip gets a tiny left buffer (extra insurance) */
-  .filter-bar > .chip:first-child{ margin-left: .05rem; }
+  .chip.active {
+    background: #000000;                        /* black background when active */
+    color: #ffffff;                             /* white text when active */
+  }
 
-  /* ❻ dark-mode tint */
-  @media (prefers-color-scheme: dark){
-    .filter-bar,
-    .filter-bar::after{ background: rgba(0,0,0,.80); }
+  /* ❹  dark-mode tint for the bar (optional: you can tweak if you want) */
+  @media (prefers-color-scheme: dark) {
+    .filter-bar {
+      background: #fbbd0a;                      /* keep same Pathe-yellow */
+      box-shadow: 0 -1px 4px #0006;             /* slightly stronger shadow in dark */
+    }
+    .chip {
+      background: #ffffff;                      /* white pills still stand out */
+      color: #000000;
+      border: 1px solid #555;                   /* slightly darker border in dark */
+    }
+    .chip.active {
+      background: #000000;
+      color: #ffffff;
+    }
   }
 }
-
-
 
 
 
