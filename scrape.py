@@ -637,8 +637,8 @@ h1 {
 
 @media (hover: none) and (pointer: coarse) {
   h1 {
-    margin-bottom: 1.2rem;
-    padding-bottom: 1rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.6rem;
   }
 }
 
