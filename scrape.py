@@ -1426,10 +1426,14 @@ function wireFaceTabs() {{
   // ─── pull-to-refresh logic ─────────────────────────────────────
   let __ptrStartY = 0;
   let __ptrDist   = 0;
-  const __ptrThreshold = 60;  // how many pixels to pull before triggering reload
+  const __ptrThreshold = 90;  // how many pixels to pull before triggering reload
 
   // touchstart: only if we’re scrolled all the way to top
   window.addEventListener('touchstart', e => {{
+    if (e.target.closest('.filter-bar')) {{
+      __ptrStartY = 0;
+      return;
+    }}
     if (window.scrollY === 0) {{
       __ptrStartY = e.touches[0].clientY;
     }} else {{
