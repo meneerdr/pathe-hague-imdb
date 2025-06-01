@@ -1226,6 +1226,31 @@ h1 {
   margin-right: 0.5rem;      /* a little gap between logo and text */
 }
 
+/* prevent the browser’s native overscroll/bounce from interrupting our JS pull-to-refresh */
+body {
+  overscroll-behavior: contain;
+}
+
+/* hidden “pull to refresh” bar */
+#pull-to-refresh {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;                        /* collapsed by default */
+  background: var(--pathe-yellow);
+  color: var(--pathe-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  overflow: hidden;
+  transition: height 0.2s ease;
+  z-index: 50;
+  font-size: 0.9rem;
+}
+
+
 """
 
 
@@ -1261,7 +1286,7 @@ HTML_TMPL = """<!doctype html>
   <style>{css}</style>
 </head>
 <body>
-
+  <div id="pull-to-refresh">↻ Pull to refresh</div>
 <h1>
   <img src="logos/pathe-logo.svg"
        alt="Pathé"
@@ -1350,6 +1375,45 @@ function wireFaceTabs() {{
     }});
   }});
 }}
+
+  // ─── pull-to-refresh logic ─────────────────────────────────────
+  let __ptrStartY = 0;
+  let __ptrDist   = 0;
+  const __ptrThreshold = 60;  // how many pixels to pull before triggering reload
+
+  // touchstart: only if we’re scrolled all the way to top
+  window.addEventListener('touchstart', e => {{
+    if (window.scrollY === 0) {{
+      __ptrStartY = e.touches[0].clientY;
+    }} else {{
+      __ptrStartY = 0;
+    }}
+  }});
+
+  // touchmove: if dragging down from the top, reveal the pull-to-refresh bar
+  window.addEventListener('touchmove', e => {{
+    if (!__ptrStartY) return;
+    __ptrDist = e.touches[0].clientY - __ptrStartY;
+    if (__ptrDist > 0) {{
+      e.preventDefault();  // prevent native bounce
+      const h = Math.min(__ptrDist, __ptrThreshold);
+      document.getElementById('pull-to-refresh').style.height = h + 'px';
+    }}
+  }});
+
+  // touchend: if pulled beyond threshold, reload; otherwise collapse
+  window.addEventListener('touchend', () => {{
+    const bar = document.getElementById('pull-to-refresh');
+    if (__ptrDist >= __ptrThreshold) {{
+      bar.textContent = '⟳ Refreshing…';
+      location.reload();
+    }}
+    // always collapse back
+    bar.style.height = '0';
+    __ptrStartY = 0;
+    __ptrDist = 0;
+  }});
+
 
 document.addEventListener('DOMContentLoaded', () => {{
   /* ─────────────────── DOM references ─────────────────── */
