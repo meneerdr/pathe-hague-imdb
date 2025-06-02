@@ -1201,17 +1201,6 @@ h1 {
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* For dark mode: invert colors on active/inactive */
-@media (prefers-color-scheme: dark) {
-  .chip       { background:#1c1c1e; color:#ddd; border-color:#FBD43033; }
-
-  .chip.active {
-  background:#000;
-  color:#ddd;
-  border: 2px solid var(--pathe-yellow);
-}
-
-}
 
 /* Optional: if you embed a tiny Pathe “bubble” logo inside */
 .chip-logo {
