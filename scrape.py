@@ -846,7 +846,7 @@ h1 {
 }
 
 .release-date-button {
-  background-color: lightgrey;
+  background-color: silver;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -871,7 +871,7 @@ h1 {
 }
 
 .soon-button {
-  background-color: lightgrey;
+  background-color: silver;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -893,7 +893,7 @@ h1 {
 
 /* Non-kids titles: black age rating */
 .adult-rating-button {          /* isKids == false */
-  background-color: lightgrey;
+  background-color: silver;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
