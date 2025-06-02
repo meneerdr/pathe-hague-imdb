@@ -67,8 +67,8 @@ MAX_OMDB_WORKERS = 10
 
 LEAK_CHECK_WORKERS = 10
 
-NEW_BOOKABLE_HOURS = 72    # “0day/…day” badge fades over 7 days
-NEW_SOON_HOURS     =  24    # “New” badge stays for 3 days
+NEW_BOOKABLE_HOURS = 168    # “0day/…day” badge fades over 7 days
+NEW_SOON_HOURS     =  24    # “New” badge stays for 24 hours
 
 DB_PATH   = os.path.join(os.path.dirname(__file__), "movies.db")
 
@@ -816,7 +816,7 @@ h1 {
 }
 
 .next-showtimes-button {
-  background-color: lightgrey;
+  background-color: darkgrey;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
@@ -949,7 +949,7 @@ h1 {
 
 
 /* dim watched cards when the “Watched” chip is active */
-.card.dim { opacity: .5; }
+.card.dim { opacity: .7; }
 
 /* snackbar that slides up from the bottom */
 #snackbar{
