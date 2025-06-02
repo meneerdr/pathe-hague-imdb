@@ -816,7 +816,7 @@ h1 {
 }
 
 .next-showtimes-button {
-  background-color: darkgrey;
+  background-color: Silver;
   color: white;
   padding: 2px 5px;
   font-weight: bold;
