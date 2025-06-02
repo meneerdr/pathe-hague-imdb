@@ -1153,6 +1153,7 @@ h1 {
   padding: 0.4rem 0.8rem;             /* more breathing room */
   border-radius: 999px;               /* full pill shape */
   background:#1c1c1e;
+  border: 2px solid #ddd;
   color:#ddd;
   border-color:#FBD43033;
   cursor: pointer;
