@@ -1099,9 +1099,9 @@ h1 {
       calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
       env(safe-area-inset-right);       /* right */
 
-    background: rgba(25,25,25,0.80);           /* 70 % Pathé-yellow */
-    backdrop-filter: blur(12px) saturate(160%);
-    box-shadow: 0 -2px 6px rgba(0,0,0,.15);
+    background: rgba(255,255,255,.78);           /* translucent backgrond */
+    backdrop-filter: blur(12px) saturate(150%);
+    box-shadow: 0 -2px 6px rgba(0,0,0,.08); /* softer because the bar is lighter */
 
     /* recalc total height so body { padding-bottom: var(--h) } works */
     --row-h: 2.5rem;                    /* approximate “chip” height */
@@ -1124,8 +1124,14 @@ h1 {
 }
 
 /* ─── 3) Dark‐mode override (applies in both desktop & mobile) ───── */
+
 @media (prefers-color-scheme: dark) {
-  .filter-bar { background: rgba(25,25,25,0.80); }
+  .filter-bar {
+    /*  ← these three declarations were previously in the mobile-touch block  */
+    background: rgba(25,25,25,.80);          /* the translucent charcoal you like */
+    backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: 0 -2px 6px rgba(0,0,0,.15);
+  }
   h1 {
     color: var(--pathe-yellow);
   }
@@ -1332,7 +1338,7 @@ HTML_TMPL = """<!doctype html>
 </div>
 
 <h1>
-  <img src="logos/pathe-logo.svg"
+  <img src="logos/apple-touch-icon.png"
        alt="Pathé"
        class="h1-icon">
   {formatted_date}, {build_time}
