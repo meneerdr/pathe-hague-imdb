@@ -1099,7 +1099,7 @@ h1 {
       calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
       env(safe-area-inset-right);       /* right */
 
-    background: rgba(255,255,255,.78);           /* translucent backgrond */
+    background: background: #d0d0d0;           /* charcoal‐leaning gray */
     backdrop-filter: blur(12px) saturate(150%);
     box-shadow: 0 -2px 6px rgba(0,0,0,.08); /* softer because the bar is lighter */
 
@@ -1281,6 +1281,12 @@ body {
 #pull-to-refresh.hide {
   transition: height 0.2s ease, opacity 0.2s ease;
   opacity: 0;
+}
+
+
+/* 1) Subtle floating look */
+#refresh {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
 }
 
 
