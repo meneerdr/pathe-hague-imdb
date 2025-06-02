@@ -1155,7 +1155,7 @@ h1 {
   background:#1c1c1e;
   border: 2px solid #ddd;
   color:#ddd;
-  border-color:#FBD43033;
+  border-color:#ddd;
   cursor: pointer;
   user-select: none;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* subtle shadow */
