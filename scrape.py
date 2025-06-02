@@ -617,8 +617,8 @@ body{
   padding-top:env(safe-area-inset-top);
   font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   /* default (light) colours */
-  background:#f6f6f7;
-  color:#111;
+  background:var(--surface-2);
+  color:var(--on-surface);
   overscroll-behavior-y: contain;
 
   /* 🆕 let iOS/Safari know that dark-mode variants are present */
@@ -935,8 +935,9 @@ h1 {
 
 /* Dark Mode Adjustments */
 @media(prefers-color-scheme:dark){
-  html,body{ background:#000; color:#e0e0e0; }
-  .card { background:#111; border-color:#222; }
+  html,body{ background:var(--surface-2); color:var(--on-surface,#e5e5e7); }
+  .card { background:var(--surface-1); border-color:#2a2a2c; }
+  .ratings-inline img{ filter:invert(1) brightness(1.4); }   /* monotone logos */
   .ratings-inline, .theaters-inline { color:#ccc; }
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
   .faces .face:not([data-face="0"]) .cinema-logo { background: #555; color: #fff; }
@@ -1098,9 +1099,9 @@ h1 {
       calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
       env(safe-area-inset-right);       /* right */
 
-    background: #fbbd0a;                /* Pathe‐yellow background */
-    backdrop-filter: none;              /* solid color, no blur */
-    box-shadow: 0 -1px 4px #0003;       /* subtle top edge shadow */
+    background: rgba(255,212,48,0.70);            /* 70 % Pathé-yellow */
+    backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: 0 -2px 6px rgba(0,0,0,.15);
 
     /* recalc total height so body { padding-bottom: var(--h) } works */
     --row-h: 2.5rem;                    /* approximate “chip” height */
@@ -1124,9 +1125,7 @@ h1 {
 
 /* ─── 3) Dark‐mode override (applies in both desktop & mobile) ───── */
 @media (prefers-color-scheme: dark) {
-  .filter-bar {
-    background: #000;       /* keep the same bar in dark mode */
-  }
+  .filter-bar { background: rgba(25,25,25,0.80); }
   h1 {
     color: var(--pathe-yellow);
   }
@@ -1135,10 +1134,15 @@ h1 {
 
 /* ─── Pathe Brand Colors ───────────────────────────────────────── */
 :root {
-  --pathe-yellow: #fbbd0a;
+  --pathe-yellow: #FBD430;
   --pathe-black:  #000000;
   --pathe-gray:   #444444;
   --chip-text:    #ffffff;
+
+  /* new neutrals for a “quieter” look */
+  --surface-1: #FFFFFF;            /* cards                               */
+  --surface-2: #F9F9FA;            /* body background                     */
+  --on-surface: #111111;           /* default text in light-mode          */
 }
 
 /* ─── Revised Chip Styling ──────────────────────────────────────── */
@@ -1148,9 +1152,9 @@ h1 {
   font-weight: 600;
   padding: 0.4rem 0.8rem;             /* more breathing room */
   border-radius: 999px;               /* full pill shape */
-  background: white;
-  color: var(--pathe-black);
-  border: 2px solid var(--pathe-gray);
+  background:#fff;
+  color:#222;
+  border:2px solid var(--pathe-yellow);
   cursor: pointer;
   user-select: none;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* subtle shadow */
@@ -1174,9 +1178,9 @@ h1 {
 
 /* Active chip: black fill, yellow text */
 .chip.active {
-  background: var(--pathe-black);
-  color: var(--pathe-yellow);
-  border-color: var(--pathe-black);
+  background: var(--pathe-yellow);
+  color:#111;
+  border-color: var(--pathe-yellow);
 }
 
 /* Hover / press feedback */
@@ -1193,16 +1197,8 @@ h1 {
 
 /* For dark mode: invert colors on active/inactive */
 @media (prefers-color-scheme: dark) {
-  .chip {
-    background: var(--pathe-gray);   /* or something like #222 */
-    color: var(--chip-text);         /* keeps the text white */
-    border-color: #555;              /* a slightly lighter border */
-  }
-  .chip.active {
-    background: var(--pathe-yellow); /* yellow on dark mode */
-    color: var(--pathe-black);       /* black text on yellow */
-    border-color: var(--pathe-yellow);
-  }
+  .chip       { background:#1c1c1e; color:#ddd; border-color:#FBD43033; }
+  .chip.active{ background:#000;    color:var(--pathe-yellow); border-color:#000; }
 }
 
 /* Optional: if you embed a tiny Pathe “bubble” logo inside */
@@ -1234,8 +1230,8 @@ body {
   height: 0;                     /* JS will expand this to, say, 50px */
   background: linear-gradient(
     to bottom,
-    rgba(251, 189, 10, 0.95),
-    rgba(251, 189, 10, 0.85)
+    rgba(255,212,48,0.92) 0%,
+    rgba(255,198,0,0.92) 100%
   );
   color: var(--pathe-black);
   display: flex;
