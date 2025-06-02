@@ -1099,7 +1099,7 @@ h1 {
       calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
       env(safe-area-inset-right);       /* right */
 
-    background: rgba(255,212,48,0.70);            /* 70 % Pathé-yellow */
+    background: rgba(25,25,25,0.80);           /* 70 % Pathé-yellow */
     backdrop-filter: blur(12px) saturate(160%);
     box-shadow: 0 -2px 6px rgba(0,0,0,.15);
 
