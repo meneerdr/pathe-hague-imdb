@@ -1307,6 +1307,8 @@ HTML_TMPL = """<!doctype html>
  <link rel="icon" type="image/png" sizes="16x16" href="logos/favicon-16x16.png">
  <link rel="manifest" href="manifest.json">
 
+ <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="logos/iPhone_13_mini__iPhone_12_mini__iPhone_11_Pro__iPhone_XS__iPhone_X_landscape.png">
+ <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="logos/iPhone_13_mini__iPhone_12_mini__iPhone_11_Pro__iPhone_XS__iPhone_X_portrait.png">
    <!-- Tell iOS Safari this is a web app -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <!-- Status bar style: default / black / black-translucent -->
