@@ -937,7 +937,6 @@ h1 {
 @media(prefers-color-scheme:dark){
   html,body{ background:var(--surface-2); color:var(--on-surface,#e5e5e7); }
   .card { background:var(--surface-1); border-color:#2a2a2c; }
-  .ratings-inline img{ filter:invert(1) brightness(1.4); }   /* monotone logos */
   .ratings-inline, .theaters-inline { color:#ccc; }
   .theaters-inline .cinema-logo { background:#555; }  /* Dark mode background */
   .faces .face:not([data-face="0"]) .cinema-logo { background: #555; color: #fff; }
