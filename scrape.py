@@ -1155,7 +1155,6 @@ h1 {
   background:#1c1c1e;
   color:#ddd;
   border-color:#FBD43033;
-  border: 2px solid var(--pathe-yellow);
   cursor: pointer;
   user-select: none;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* subtle shadow */
@@ -1177,11 +1176,11 @@ h1 {
   }
 }
 
-/* Active chip: black fill, yellow text */
+/* Active chip */
 .chip.active {
   background:#000;
-  color:var(--pathe-yellow);
-  border-color:#000;
+  color:#ddd;
+  border: 2px solid var(--pathe-yellow);
 }
 
 /* Hover / press feedback */
