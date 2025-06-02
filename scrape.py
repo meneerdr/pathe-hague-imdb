@@ -1341,7 +1341,7 @@ HTML_TMPL = """<!doctype html>
   <!-- quick-filter chips -->
   <div class="filter-bar">
         <img
-        src="logos/apple-touch-icon-bw.png"
+        src="logos/refresh.png"
         alt="Pathé"
         class="chip-logo"
         id="refresh"
