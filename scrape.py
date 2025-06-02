@@ -1152,9 +1152,9 @@ h1 {
   font-weight: 600;
   padding: 0.4rem 0.8rem;             /* more breathing room */
   border-radius: 999px;               /* full pill shape */
-  background:#fff;
-  color:#222;
-  border:2px solid var(--pathe-yellow);
+  background:#1c1c1e
+  color:#ddd;
+  border-color:#FBD43033;
   cursor: pointer;
   user-select: none;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* subtle shadow */
@@ -1178,9 +1178,9 @@ h1 {
 
 /* Active chip: black fill, yellow text */
 .chip.active {
-  background: var(--pathe-yellow);
-  color:#111;
-  border-color: var(--pathe-yellow);
+  background:#000;
+  color:var(--pathe-yellow);
+  border-color:#000;
 }
 
 /* Hover / press feedback */
