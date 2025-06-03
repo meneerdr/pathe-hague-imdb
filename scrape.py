@@ -627,34 +627,38 @@ body{
 
 
 /* ------------- loading curtain ------------- */
-#loader {
-  position: fixed;
-  inset: 0;                          /* full viewport */
-  background: #fbbd0a;               /* Pathe yellow */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;                    /* above EVERYTHING */
-  /* optional micro-fade at the end */
-  opacity: 1;
-  transition: opacity .25s ease-out;
+#loader{
+  position:fixed;
+  inset:0;
+  display:grid;
+  place-items:center;
+  background:#fbbd0a;
+  z-index:2147483647;
+  opacity:1;
+  transition:opacity .25s ease-out;
 }
+html.loaded #loader{ opacity:0; pointer-events:none; }
 
-#loader .ring {
-  width: 56px;
-  height: 56px;
-  animation: loader-spin 1s linear infinite;
-  stroke-width: 3px;
-  stroke: var(--pathe-black);
+/* the rotating arc ------------------------------------------------*/
+#loader .ring{
+  width:56px;
+  height:56px;
+  stroke:var(--pathe-black);
+  stroke-width:3px;
+  fill:none;
 
-  /* ensure rotation is around the SVG’s centre: */
-  transform-box: fill-box;
-  transform-origin: center;
+  /* make the rotation centre reliable in every browser */
+  transform-box:fill-box;
+  transform-origin:center;
+
+  /* smooth, GPU-backed animation */
+  will-change:transform;
+  animation:loader-spin 1s linear infinite;
 }
+/* Safari still needs the prefixed version */
+@-webkit-keyframes loader-spin{ to{ transform:rotate(360deg); } }
+@keyframes        loader-spin{ to{ transform:rotate(360deg); } }
 
-
-/* Optional: keep everything centred on its own layer */
-#loader .ring{ transform: translateZ(0); }
 
 
 /* dark-mode variant */
@@ -663,7 +667,6 @@ body{
   #loader .ring { stroke: #fbbd0a; }
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---- once the page is ready, we add .loaded to <html> ---- */
 html.loaded #loader { opacity: 0; pointer-events: none; }
@@ -679,12 +682,6 @@ html.loaded #loader { opacity: 0; pointer-events: none; }
 #loader{
   z-index:2147483647;        /* absolute top */
   transform:translateZ(0);   /* promote the curtain */
-}
-
-
-/* ─── loader spin (unique name avoids clashes) ─────────────────── */
-@keyframes loader-spin {            /* ONLY for #loader .ring  */
-  to { transform: rotate(360deg); }
 }
 
 
@@ -1381,15 +1378,15 @@ HTML_TMPL = """<!doctype html>
 
 <!-- page-wide loading curtain -->
 <div id="loader">
-  <svg class="ring" viewBox="0 0 38 38">
-     <circle cx="19" cy="19" r="16"
-             stroke-width="4"
-             stroke-linecap="round"
-             fill="none"
-             stroke-dasharray="75 25"   <!--  ~270° arc + 90° gap -->
-             stroke-dashoffset="0" />
+  <svg viewBox="0 0 38 38" class="ring" aria-hidden="true">
+    <circle cx="19" cy="19" r="16"
+            stroke-width="4"
+            stroke-linecap="round"
+            fill="none"
+            stroke-dasharray="75 25"/>
   </svg>
 </div>
+
 
 <script>
 /* Hide the curtain once everything is loaded */
