@@ -664,6 +664,13 @@ html.loaded #loader { opacity: 0; pointer-events: none; }
 }
 */
 
+/* ─── keep loader on its own GPU layer ───────────────────── */
+#loader{
+  z-index:2147483647;        /* absolute top */
+  transform:translateZ(0);   /* promote the curtain */
+}
+
+
 h1 {
   font-size: 1.5rem;                      /* slightly smaller than 2rem */
   font-weight: 600;                        /* keep it bold, but not enormous */
@@ -1145,7 +1152,7 @@ h1 {
     );
 
     /* keep this layer separate so it never “loses” its children */
-    transform: translateZ(0);
+    /* transform: translateZ(0);  */
     will-change: transform;
   }
 
