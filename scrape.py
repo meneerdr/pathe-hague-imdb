@@ -1590,9 +1590,9 @@ document.addEventListener('DOMContentLoaded', () => {{
 
            /* hide a watched card whenever the Watched chip is *not* on */
            /* old logic:  if (isWatched && !watchedChipOn && !topicalOn)  */
-            if (isWatched && !watchedChipOn) {
+            if (isWatched && !watchedChipOn) {{
                 show = false;
-            }
+            }}
 
         }}
 
