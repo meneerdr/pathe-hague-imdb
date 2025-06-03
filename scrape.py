@@ -1234,7 +1234,9 @@ h1 {
 .chip.active {
   background:#000;
   color:#ddd;
-  border: 2px solid var(--pathe-yellow);
+  /* border: 2px solid var(--pathe-yellow); */
+    box-shadow:0 0 0 3px #FBD430,      /* halo */
+             0 2px 4px rgba(0,0,0,.25);  /* existing shadow */
 }
 
 /* Hover / press feedback */
