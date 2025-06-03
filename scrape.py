@@ -1098,7 +1098,7 @@ h1 {
       calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
       env(safe-area-inset-right);       /* right */
 
-    background: rgba(255,255,255,.78);           /* translucent background */
+    background: rgba(190,190,190,0.88);            /* translucent background */
     backdrop-filter: blur(12px) saturate(150%);
     box-shadow: 0 -2px 6px rgba(0,0,0,.08); /* softer because the bar is lighter */
 
@@ -1186,8 +1186,7 @@ h1 {
 .chip.active {
   background:#000;
   color:#ddd;
-  border: 3px solid var(--pathe-yellow);
-  box-shadow:0 0 0 1px #1c1c1e inset;
+  border: 2px solid var(--pathe-yellow);
 }
 
 /* Hover / press feedback */
