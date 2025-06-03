@@ -633,9 +633,11 @@ body{
   display:grid;
   place-items:center;
   background:#fbbd0a;
-  z-index:2147483647;
+  z-index:2147483647;        /* absolute top */
   opacity:1;
   transition:opacity .25s ease-out;
+  transform:translateZ(0);   /* promote the curtain */
+  isolation: isolate;
 }
 html.loaded #loader{ opacity:0; pointer-events:none; }
 
@@ -677,12 +679,6 @@ html.loaded #loader { opacity: 0; pointer-events: none; }
   overscroll-behavior-y: contain;
 }
 */
-
-/* ─── keep loader on its own GPU layer ───────────────────── */
-#loader{
-  z-index:2147483647;        /* absolute top */
-  transform:translateZ(0);   /* promote the curtain */
-}
 
 
 h1 {
@@ -1126,6 +1122,20 @@ h1 {
 
 /* ─── 2) Touch / “pointer: coarse” (fixed bottom) ────────────────── */
 @media (hover: none) and (pointer: coarse) {
+
+  /* --- shared props, visible to every element --- */
+  :root{
+    --row-h: 2.5rem;                    /* ≈ chip height                */
+    --pad-top:  .35rem;                 /* space above the chip row     */
+    --pad-bot:  .12rem;                 /* space below the chip row     */
+    --h: calc(
+      var(--row-h) +
+      var(--pad-top) +
+      var(--pad-bot) +
+      env(safe-area-inset-bottom)
+    );
+  }
+
   .filter-bar {
     /* prevent the bar from being dragged by a vertical swipe */
     overscroll-behavior: contain;
@@ -1136,15 +1146,11 @@ h1 {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 999;                       /* stay above cards */
+    z-index: 1000;                       /* stay above cards */
     display: flex;                      /* ← must remain flex on touch */
     align-items: center;
     gap: .1rem;                         /* chip‐to‐chip gap */
     scroll-snap-type: x proximity;
-
-    /* interior spacing for safe‐area at the bottom */
-    --pad-top:  .35rem;                 /* space *above* the pills */
-    --pad-bot:  .12rem;                 /* space *below* the pills */
 
     padding:
       var(--pad-top)                    /* top */
@@ -1155,15 +1161,6 @@ h1 {
     background: rgba(200,200,200,0.88);            /* translucent background */
     backdrop-filter: blur(12px) saturate(150%);
     box-shadow: 0 -2px 6px rgba(0,0,0,.08); /* softer because the bar is lighter */
-
-    /* recalc total height so body { padding-bottom: var(--h) } works */
-    --row-h: 2.5rem;                    /* approximate “chip” height */
-    --h: calc(
-      var(--row-h)
-      + var(--pad-top)
-      + var(--pad-bot)
-      + env(safe-area-inset-bottom)
-    );
 
   }
 
