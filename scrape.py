@@ -1316,6 +1316,9 @@ body {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
 }
 
+#loader .ring {            /* the <svg> element */
+  transform-origin: center;   /* fixes iOS/Safari */
+}
 
 """
 
@@ -1360,7 +1363,8 @@ HTML_TMPL = """<!doctype html>
   <svg class="ring" viewBox="0 0 38 38">
     <circle cx="19" cy="19" r="16"
             stroke-width="4" stroke-linecap="round"
-            fill="none" />
+            stroke-dasharray="31.4 31.4"   <!-- ← add this -->
+            fill="none"/>
   </svg>
 </div>
 
