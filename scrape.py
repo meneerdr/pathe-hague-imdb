@@ -1596,24 +1596,21 @@ document.addEventListener('DOMContentLoaded', () => {{
 
         let show;
 
-        if (allOn) {{
-          /* “All” chip ON → always show everything */
+        if (allOn) {{                           // “All” chip → always everything
           show = true;
 
-        }} else if (active.length === 0) {{
-          /* ★★ default view ★★ – hide future & watched cards */
+        }} else if (watchedChipOn && active.length === 1) {{
+          // only the “Hidden” chip is active → show *all watched* cards, hide the rest
+          show = isWatched;
+
+        }} else if (active.length === 0) {{      // default view (no chips)
           show = !tags.includes('future') && !isWatched;
 
         }} else {{
-          /* any other combination of chips */
+          // any other chip combination follows tag logic
           show = active.some(t => tags.includes(t));
-
-           /* hide a watched card whenever the Watched chip is *not* on */
-           /* old logic:  if (isWatched && !watchedChipOn && !topicalOn)  */
-            if (isWatched && !watchedChipOn) {{
-                show = false;
-            }}
-
+          // but still hide watched cards unless the Watched chip is on
+          if (isWatched && !watchedChipOn) show = false;
         }}
 
         card.classList.toggle('hidden', !show);
