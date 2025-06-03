@@ -1233,7 +1233,7 @@ h1 {
 /* Active chip */
 .chip.active {
   background:#000;
-  color:#FBD430;
+  color:#ddd;
   border: 2px solid var(--pathe-yellow);
 }
 
