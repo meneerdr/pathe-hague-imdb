@@ -640,11 +640,16 @@ body{
   transition: opacity .25s ease-out;
 }
 
-#loader .ring {
-  width: 68px; height: 68px;
-  stroke: #191919;                   /* Charcoal */
+#loader .ring{
+  width: 56px;            /* slimmer ring, scale as you like */
+  height: 56px;
+  /* REMOVE any fill here; leave stroke only */
   animation: spin 1s linear infinite;
 }
+
+/* Optional: keep everything centred on its own layer */
+#loader .ring{ transform: translateZ(0); }
+
 
 /* dark-mode variant */
 @media (prefers-color-scheme: dark) {
@@ -1151,9 +1156,6 @@ h1 {
       + env(safe-area-inset-bottom)
     );
 
-    /* keep this layer separate so it never “loses” its children */
-    /* transform: translateZ(0);  */
-    will-change: transform;
   }
 
   /* push page content up so cards don’t slide under the bottom bar */
