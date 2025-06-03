@@ -640,13 +640,18 @@ body{
   transition: opacity .25s ease-out;
 }
 
-#loader .ring{
-  width: 56px;            /* slimmer ring, scale as you like */
+#loader .ring {
+  width: 56px;
   height: 56px;
-  animation: loader-spin 1s linear infinite;   /* ← change this line */
-  stroke-width: 3px;    /* was scaling up to ≈6 px – now stays slim */
+  animation: loader-spin 1s linear infinite;
+  stroke-width: 3px;
   stroke: var(--pathe-black);
+
+  /* ensure rotation is around the SVG’s centre: */
+  transform-box: fill-box;
+  transform-origin: center;
 }
+
 
 /* Optional: keep everything centred on its own layer */
 #loader .ring{ transform: translateZ(0); }
