@@ -645,6 +645,7 @@ body{
   height: 56px;
   /* REMOVE any fill here; leave stroke only */
   animation: spin 1s linear infinite;
+  stroke-width: 3px;    /* was scaling up to ≈6 px – now stays slim */
 }
 
 /* Optional: keep everything centred on its own layer */
@@ -1370,10 +1371,12 @@ HTML_TMPL = """<!doctype html>
 <!-- page-wide loading curtain -->
 <div id="loader">
   <svg class="ring" viewBox="0 0 38 38">
-    <circle cx="19" cy="19" r="16"
-            stroke-width="4" stroke-linecap="round"
-            stroke-dasharray="31.4 31.4"   <!-- ← add this -->
-            fill="none"/>
+     <circle cx="19" cy="19" r="16"
+             stroke-width="4"
+             stroke-linecap="round"
+             fill="none"
+             stroke-dasharray="75 25"   <!--  ~270° arc + 90° gap -->
+             stroke-dashoffset="0" />
   </svg>
 </div>
 
