@@ -1667,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', () => {{
         }}
 
         apply();
-        
+        window.scrollTo({{ top: 0, behavior: 'smooth' }});
       }});
     }});
 
