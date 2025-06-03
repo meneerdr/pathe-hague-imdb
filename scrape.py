@@ -1584,16 +1584,12 @@ document.addEventListener('DOMContentLoaded', () => {{
           /* any other combination of chips */
           show = active.some(t => tags.includes(t));
 
-          /* hide watched **only** when neither Watched nor a topical chip is on */
-         /* old logic:  if (isWatched && !watchedChipOn && !topicalOn)  */
-          if (isWatched && !watchedChipOn && !allOn) {{
-            show = false;
-          }}
+           /* hide a watched card whenever the Watched chip is *not* on */
+           /* old logic:  if (isWatched && !watchedChipOn && !topicalOn)  */
+            if (isWatched && !watchedChipOn) {
+                show = false;
+            }
 
-          /* Watched chip ON → force the watched card to show */
-          if (watchedChipOn && isWatched) {{
-            show = true;
-          }}
         }}
 
         card.classList.toggle('hidden', !show);
