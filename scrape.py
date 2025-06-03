@@ -1186,7 +1186,8 @@ h1 {
 .chip.active {
   background:#000;
   color:#ddd;
-  border: 2px solid var(--pathe-yellow);
+  border: 3px solid var(--pathe-yellow);
+  box-shadow:0 0 0 1px #1c1c1e inset;
 }
 
 /* Hover / press feedback */
@@ -1524,7 +1525,8 @@ document.addEventListener('DOMContentLoaded', () => {{
           show = active.some(t => tags.includes(t));
 
           /* hide watched **only** when neither Watched nor a topical chip is on */
-          if (isWatched && !watchedChipOn && !topicalOn) {{
+         /* old logic:  if (isWatched && !watchedChipOn && !topicalOn)  */
+          if (isWatched && !watchedChipOn && !allOn) {{
             show = false;
           }}
 
