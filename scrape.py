@@ -1506,53 +1506,6 @@ function wireFaceTabs() {{
   }});
 }}
 
-  // ─── pull-to-refresh logic ─────────────────────────────────────
-  let __ptrStartY = 0;
-  let __ptrDist   = 0;
-  const __ptrOffset    = 50; // how many pixels to pull before showing any bar
-  const __ptrThreshold = 50; // how many pixels (after offset) before triggering reload
-
-
-  // touchstart: only if we’re scrolled all the way to top
-   window.addEventListener('touchstart', e => {{
-    if (e.target.closest('.filter-bar')) {{
-      __ptrStartY = 0;
-      return;
-    }}
-    if (window.scrollY === 0) {{
-      __ptrStartY = e.touches[0].clientY;
-    }} else {{
-      __ptrStartY = 0;
-    }}
-  }});
-
-  // touchmove: if dragging down from the top, reveal the pull-to-refresh bar
-  window.addEventListener('touchmove', e => {{
-    if (!__ptrStartY) return;
-    __ptrDist = e.touches[0].clientY - __ptrStartY;
-    if (__ptrDist > __ptrOffset) {{
-      e.preventDefault();  // prevent native bounce
-      // subtract the “dead zone” before growing
-      const grow = __ptrDist - __ptrOffset;
-      const h    = Math.min(grow, __ptrThreshold);
-      document.getElementById('pull-to-refresh').style.height = h + 'px';
-    }}
-  }});
-
-  // touchend: if pulled beyond threshold, reload; otherwise collapse
-  window.addEventListener('touchend', () => {{
-    const bar = document.getElementById('pull-to-refresh');
-    if (__ptrDist - __ptrOffset >= __ptrThreshold) {{
-      bar.textContent = '⟳ Refreshing…';
-      /* ⬇ show curtain again */
-      document.documentElement.classList.remove('loaded');
-      location.reload();
-    }}
-    // always collapse back
-    bar.style.height = '0';
-    __ptrStartY = 0;
-    __ptrDist = 0;
-  }});
 
 
 document.addEventListener('DOMContentLoaded', () => {{
