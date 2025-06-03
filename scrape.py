@@ -643,9 +643,9 @@ body{
 #loader .ring{
   width: 56px;            /* slimmer ring, scale as you like */
   height: 56px;
-  /* REMOVE any fill here; leave stroke only */
-  animation: spin 1s linear infinite;
+  animation: loader-spin 1s linear infinite;   /* ← change this line */
   stroke-width: 3px;    /* was scaling up to ≈6 px – now stays slim */
+  stroke: var(--pathe-black);
 }
 
 /* Optional: keep everything centred on its own layer */
@@ -674,6 +674,12 @@ html.loaded #loader { opacity: 0; pointer-events: none; }
 #loader{
   z-index:2147483647;        /* absolute top */
   transform:translateZ(0);   /* promote the curtain */
+}
+
+
+/* ─── loader spin (unique name avoids clashes) ─────────────────── */
+@keyframes loader-spin {            /* ONLY for #loader .ring  */
+  to { transform: rotate(360deg); }
 }
 
 
