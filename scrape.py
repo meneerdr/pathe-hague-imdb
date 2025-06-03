@@ -998,7 +998,7 @@ h1 {
 
 
 /* dim watched cards when the “Watched” chip is active */
-.card.dim { opacity: .7; }
+.card.dim { opacity: .6; }
 
 /* snackbar that slides up from the bottom */
 #snackbar{
@@ -1233,7 +1233,7 @@ h1 {
 /* Active chip */
 .chip.active {
   background:#000;
-  color:#ddd;
+  color:#FBD430;
   border: 2px solid var(--pathe-yellow);
 }
 
