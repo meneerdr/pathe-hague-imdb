@@ -625,6 +625,39 @@ body{
   color-scheme: light dark;
 }
 
+
+/* ------------- loading curtain ------------- */
+#loader {
+  position: fixed;
+  inset: 0;                          /* full viewport */
+  background: #fbbd0a;               /* Pathe yellow */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;                    /* above EVERYTHING */
+  /* optional micro-fade at the end */
+  opacity: 1;
+  transition: opacity .25s ease-out;
+}
+
+#loader .ring {
+  width: 68px; height: 68px;
+  stroke: #191919;                   /* Charcoal */
+  animation: spin 1s linear infinite;
+}
+
+/* dark-mode variant */
+@media (prefers-color-scheme: dark) {
+  #loader { background: #191919; }
+  #loader .ring { stroke: #fbbd0a; }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- once the page is ready, we add .loaded to <html> ---- */
+html.loaded #loader { opacity: 0; pointer-events: none; }
+
+
 /* If your cards live inside a .grid that actually scrolls, do this instead:
 .grid {
   overscroll-behavior-y: contain;
@@ -1098,7 +1131,7 @@ h1 {
       calc(var(--pad-bot) + env(safe-area-inset-bottom)) /* bottom */
       env(safe-area-inset-right);       /* right */
 
-    background: rgba(190,190,190,0.88);            /* translucent background */
+    background: rgba(200,200,200,0.88);            /* translucent background */
     backdrop-filter: blur(12px) saturate(150%);
     box-shadow: 0 -2px 6px rgba(0,0,0,.08); /* softer because the bar is lighter */
 
@@ -1322,6 +1355,28 @@ HTML_TMPL = """<!doctype html>
 </head>
 <body>
 
+<!-- page-wide loading curtain -->
+<div id="loader">
+  <svg class="ring" viewBox="0 0 38 38">
+    <circle cx="19" cy="19" r="16"
+            stroke-width="4" stroke-linecap="round"
+            fill="none" />
+  </svg>
+</div>
+
+<script>
+/* Hide the curtain once everything is loaded */
+window.addEventListener('load', () => {{
+  document.documentElement.classList.add('loaded');
+}});
+
+/* Show it again for any refresh / navigation */
+window.addEventListener('beforeunload', () => {{
+  document.documentElement.classList.remove('loaded');
+}});
+</script>
+
+
 <!-- Pull‐to‐Refresh bar (insert this just below <body> ) -->
 <div id="pull-to-refresh">
   <!-- Spinner SVG -->
@@ -1466,6 +1521,8 @@ function wireFaceTabs() {{
     const bar = document.getElementById('pull-to-refresh');
     if (__ptrDist - __ptrOffset >= __ptrThreshold) {{
       bar.textContent = '⟳ Refreshing…';
+      /* ⬇ show curtain again */
+      document.documentElement.classList.remove('loaded');
       location.reload();
     }}
     // always collapse back
@@ -1482,8 +1539,12 @@ document.addEventListener('DOMContentLoaded', () => {{
   const snackbar = document.getElementById('snackbar');
 
   /* pull-to-refresh replacement — manual button */
-  document.getElementById('refresh')
-    ?.addEventListener('click', () => location.reload());
+    document.getElementById('refresh')
+      ?.addEventListener('click', () => {{
+        document.documentElement.classList.remove('loaded');   // show curtain
+        location.reload();
+      }});
+
 
   /* ─────────────────── watched <Set> in localStorage ─────────────────── */
   const KEY = 'watchedSlugs-v1';
