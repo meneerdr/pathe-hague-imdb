@@ -2154,8 +2154,10 @@ def build_html(shows: List[dict],
             code = cin_name[:2].upper()
             blocks.append(
                 f'<div class="cinema-block">'
+                f'<a href="{film_url}" target="_blank" style="text-decoration:none;">'
                 f'  <span class="cinema-logo" data-code="{code}">'
                 f'{escape(cin_name)}</span>'
+                f'  </a>'
                 f'  <div class="buttons-line"></div>'
                 f'</div>'
             )
