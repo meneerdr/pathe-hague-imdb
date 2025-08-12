@@ -35,13 +35,13 @@ ZONE_URL         = "https://www.pathe.nl/api/zone/den-haag"
 CINEMA_URL_TMPL  = "https://www.pathe.nl/api/cinema/{slug}/shows"
 
 PAGE_SIZES       = (100, 50, 20)
-DEFAULT_TIMEOUT  = 30
+DEFAULT_TIMEOUT  = 90
 
 RETRIES = Retry(
-    total=3,
-    connect=3,
-    read=3,
-    backoff_factor=2,
+    total=5,            # be more patient; you run hourly
+    connect=5,
+    read=5,
+    backoff_factor=2.5, # gentle exponential backoff
     status_forcelist=(500,502,503,504),
     allowed_methods={"GET"},
 )
@@ -119,8 +119,8 @@ def fetch_shows(date: str) -> List[dict]:
                 return shows
         except Exception as exc:
             LOG.warning("pageSize=%d failed – %s", size, exc)
-    LOG.critical("💥 Could not retrieve any shows for %s", date)
-    sys.exit(1)
+    LOG.critical("💥 Could not retrieve any shows for %s – falling back to zone-only path", date)
+    return []
 
 def fetch_zone_slugs() -> Set[str]:
     LOG.info("🔗 fetching Den Haag zone …")
@@ -179,7 +179,7 @@ def fetch_cinema_showtimes_data(cinema_slug: str, for_date: str) -> dict[str, di
                 f"/showtimes/{cinema_slug}/{day}"
             )
             try:
-                arr = get_json(st_url, params={"language": "nl"}, timeout=10)
+                arr = get_json(st_url, params={"language": "nl"}, timeout=20)
                 times = [itm["time"][-8:-3] for itm in arr if "time" in itm]
                 day_info["showtimes"] = times        # inject for later use
             except Exception as exc:
@@ -205,17 +205,14 @@ def fetch_zone_data() -> Dict[str, dict]:
     for show in data.get("shows", []):
         tags = show.get("tags") or []
         zone_data[show["slug"]] = {
-            "isKids":      show.get("isKids", False),
-            "bookable":    show.get("bookable", False),
-
-            # keep the **zone** figure for the 24-hour badge
-            "zoneNext24":  show.get("next24ShowtimesCount", 0),
-
-            # premium formats available in the zone
-            "hasIMAX":     "imax"  in tags,
-            "hasDolby":    "dolby" in tags,
-            "hasAVP":      "avp"      in tags,
-            "isLast":    "lastchance" in tags,
+            "isKids":        show.get("isKids", False),
+            "bookable":      show.get("bookable", False),
+            "isComingSoon":  show.get("isComingSoon", False),   # <-- added
+            "zoneNext24":    show.get("next24ShowtimesCount", 0),
+            "hasIMAX":       "imax"  in tags,
+            "hasDolby":      "dolby" in tags,
+            "hasAVP":        "avp"      in tags,
+            "isLast":        "lastchance" in tags,
         }
     return zone_data
 
@@ -448,7 +445,7 @@ def fetch_omdb_data(show: dict, key: str) -> dict:
 
     try:
         # first try with the given year (if any)
-        d = get_json(OMDB_URL, params=params.copy(), timeout=10)
+        d = get_json(OMDB_URL, params=params.copy(), timeout=20)
         if d.get("Response") != "True":
             # only retry if we had a year and OMDb explicitly says "Movie not found!"
             error = d.get("Error", "")
@@ -457,7 +454,7 @@ def fetch_omdb_data(show: dict, key: str) -> dict:
                 params_retry = params.copy()
                 params_retry["y"] = str(int(year) - 1)
                 LOG.debug("Retrying OMDb lookup for %r with year=%s", title, params_retry["y"])
-                d = get_json(OMDB_URL, params=params_retry, timeout=10)
+                d = get_json(OMDB_URL, params=params_retry, timeout=20)
             # if still no good, bail out
             if d.get("Response") != "True":
                 return {}
@@ -2306,6 +2303,10 @@ def main():
     for s in shows:
         slug = s["slug"]
         zd   = zone_data.get(slug, {})
+
+        # Always reflect zone flags onto the card object (works even on fallback)
+        s["isComingSoon"] = zd.get("isComingSoon", s.get("isComingSoon", False))
+        s["bookable"]     = zd.get("bookable",     s.get("bookable", False))
 
         # a) bookable-based “0day/n-day” badge
         hrs_b, is_new_b = register_and_age_bookable(slug, zd.get("bookable", False))
