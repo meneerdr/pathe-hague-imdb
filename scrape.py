@@ -1483,15 +1483,16 @@ function wireFaceTabs() {{
 
     card.querySelectorAll('.theaters-inline .cinema-logo')
         .forEach((logo, idx) => {{
-          logo.addEventListener('click', () => {{
+          logo.addEventListener('click', (e) => {{
+            // If this logo is inside a link, let the link navigate — do NOT flip faces
+            if (e.currentTarget.closest('a')) return;
+
             faces.forEach(f => f.classList.remove('active'));
             pagerDots.forEach(d => d.classList.remove('active'));
-            faces[idx + 1].classList.add('active');   // +1 skips the primary face
-            pagerDots[idx + 1].classList.add('active');
+            faces[idx + 1]?.classList.add('active');    // +1 skips primary face
+            pagerDots[idx + 1]?.classList.add('active');
 
-            if (idx+1 > 0) card.classList.add('alt-face');
-                else card.classList.remove('alt-face');
-
+            card.classList.toggle('alt-face', (idx + 1) > 0);
           }});
         }});
 
